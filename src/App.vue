@@ -38,7 +38,8 @@ let router: RouterClient | undefined
 let bogotaGeometry: GeoJSON.Geometry | undefined
 
 const mapStyle = import.meta.env.VITE_MAP_STYLE_URL || 'https://demotiles.maplibre.org/style.json'
-const pmtilesUrl = import.meta.env.VITE_PMTILES_URL
+// Usa el extracto local por defecto; la variable solo permite reemplazarlo.
+const pmtilesUrl = import.meta.env.VITE_PMTILES_URL || '/data/bogota.pmtiles'
 const routeCollection: GeoJSON.FeatureCollection<GeoJSON.LineString, RouteSegmentProperties> = { type: 'FeatureCollection', features: [] }
 const hasRoute = ref(false)
 
