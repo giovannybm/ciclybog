@@ -5,4 +5,3 @@
 [build.environment]
   NODE_VERSION = "22"
   PNPM_VERSION = "12"
-  PNPM_FLAGS = "--allow-build=esbuild"
