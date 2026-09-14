@@ -1,0 +1,25 @@
+# Tareas
+
+- [x] Crear shell Vue 3 + Vite + TypeScript.
+- [x] Integrar MapLibre y controles básicos del mapa.
+- [x] Integrar motor Rust/WASM propio y carga de grafo configurable.
+- [x] Guardar grafo y rutas en IndexedDB y mostrarlas en la interfaz.
+- [x] Ejecutar A* en Web Worker y devolver segmentos clasificados.
+- [x] Limitar paneo y selección al área MVP de Bogotá.
+- [x] Configurar manifest y service worker PWA.
+- [x] Añadir el grafo real de Bogotá generado desde OSM PBF.
+- [x] Documentar junto al artefacto la fecha, licencia y versión de la fuente OSM/Protomaps.
+- [x] Definir PMTiles/Protomaps como proveedor de mapa local y estrategia de precache PWA.
+- [x] Añadir máscara exterior, margen de paneo y estilos diferenciados para zonas verdes, agua y ciclorutas.
+- [x] Propagar errores específicos del worker Rust/WASM a la interfaz.
+- [x] Ponderar el ruteo para favorecer ciclorutas y evitar componentes aislados del grafo.
+- [x] Conectar intersecciones geométricas entre segmentos cartográficos antes de generar el grafo.
+- [x] Cambiar la búsqueda de rutas a A* bidireccional.
+- [x] Implementar snap exacto sobre aristas y conservar costos proporcionales en los extremos.
+- [x] Incorporar restricciones de giro OSM.
+- [x] Añadir penalización contextual básica para giros rectos, suaves, fuertes y retornos.
+- [x] Migrar las listas de adyacencia del `.bin` a una estructura CSR compacta.
+- [x] Añadir exportador del grafo binario a GeoJSON para inspección en QGIS.
+- [ ] Añadir edición, renombrado, eliminación y exportación GeoJSON/GPX.
+- [ ] Añadir pruebas de persistencia y flujo de creación de rutas.
+- [ ] Medir tamaño del grafo y tiempo de inicialización en dispositivos móviles.

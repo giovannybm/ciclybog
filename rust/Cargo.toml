@@ -1,0 +1,3 @@
+[workspace]
+members = ["router-core", "router-wasm", "data-pipeline"]
+resolver = "2"

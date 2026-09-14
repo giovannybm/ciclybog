@@ -1,0 +1,10 @@
+[package]
+name = "ciclybog-data-pipeline"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ciclybog-router-core = { path = "../router-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+osmpbfreader = "0.19.1"

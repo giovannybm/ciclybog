@@ -1,0 +1,50 @@
+{
+  "name": "ciclybog",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "packageManager": "pnpm@12.0.0",
+  "engines": {
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "preinstall": "npx only-allow pnpm",
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc -b",
+    "pwa:assets": "pwa-assets-generator",
+    "router:test": "cargo test --manifest-path rust/Cargo.toml --workspace",
+    "router:check": "cargo check --manifest-path rust/Cargo.toml --workspace",
+    "router:wasm": "./scripts/build-router-wasm.sh",
+    "router:sample-data": "cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-data-pipeline -- data/bogota-network.sample.geojson public/data/bogota-graph.bin",
+    "router:pmtiles-data": "node scripts/generate-graph-from-pmtiles.mjs public/data/bogota.pmtiles data/bogota-network.generated.geojson && cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-data-pipeline -- data/bogota-network.generated.geojson public/data/bogota-graph.bin",
+    "router:osm-data": "cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-data-pipeline -- data/bogota.osm.pbf public/data/bogota-graph.bin public/data/bogota-cycleways.geojson",
+    "router:inspect": "cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-router-core --example inspect_graph -- public/data/bogota-graph.bin",
+    "router:export-geojson": "cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-router-core --example export_graph -- public/data/bogota-graph.bin data/bogota-graph.geojson",
+    "geocoder:generate": "cargo run --release --manifest-path rust/Cargo.toml -p ciclybog-data-pipeline --bin geocoder -- data/bogota.osm.pbf public/data/bogota-geocoder.json",
+    "map:download": "./scripts/download-bogota-pmtiles.sh",
+    "map:download-osm": "./scripts/download-bogota-osm-pbf.sh",
+    "map:boundary:update": "node scripts/update-bogota-boundary.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mapbox/vector-tile": "^3.0.0",
+    "@protomaps/basemaps": "^5.7.2",
+    "maplibre-gl": "^5.6.1",
+    "pbf": "^5.1.2",
+    "pmtiles": "^4.5.0",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^24.3.0",
+    "@vite-pwa/assets-generator": "^2.0.0",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.3",
+    "vite-plugin-pwa": "^1.0.2",
+    "vitest": "^5.0.0",
+    "vue-tsc": "^3.0.6"
+  }
+}

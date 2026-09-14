@@ -1,0 +1,8 @@
+node_modules/
+dist/
+rust/target/
+.DS_Store
+.env
+data/*.generated.geojson
+data/bogota-graph.geojson
+data/*.osm.pbf

@@ -1,0 +1,9 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type":"Feature","properties":{"forward_cost":1,"backward_cost":1,"name":"Ciclovía de prueba","infrastructure":"cycleway","bicycle_access":"designated"},"geometry":{"type":"LineString","coordinates":[[-74.08,4.70],[-74.07,4.70]]}},
+    {"type":"Feature","properties":{"forward_cost":1,"backward_cost":1,"name":"Ciclovía de prueba","infrastructure":"cycleway","bicycle_access":"designated"},"geometry":{"type":"LineString","coordinates":[[-74.07,4.70],[-74.06,4.70]]}},
+    {"type":"Feature","properties":{"forward_cost":1,"backward_cost":1,"name":"Carrera convencional","infrastructure":"conventional","bicycle_access":"yes"},"geometry":{"type":"LineString","coordinates":[[-74.08,4.70],[-74.07,4.71],[-74.06,4.70]]}},
+    {"type":"Feature","properties":{"forward_cost":1,"backward_cost":1,"name":"Carrera convencional","infrastructure":"conventional","bicycle_access":"yes"},"geometry":{"type":"LineString","coordinates":[[-74.07,4.71],[-74.07,4.69]]}}
+  ]
+}
