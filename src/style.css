@@ -45,7 +45,12 @@ button.link { padding: 0; color: #0f766e; background: transparent; font-weight: 
 .swatch.cycleway { background: #17601a; } .swatch.conventional { background: #f59e0b; } .swatch.unknown { background: #64748b; }
 .empty, .hint { color: #627d98; font-size: .84rem; line-height: 1.5; }
 .hint { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #d9e2ec; }
+.privacy-link { margin-top: .7rem; font-size: .78rem; }
+.consent-banner { position: fixed; right: 1rem; bottom: 1rem; z-index: 5; display: flex; max-width: 38rem; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid #bcccdc; border-radius: .65rem; background: #fff; box-shadow: 0 8px 30px #102a4330; }
+.consent-banner p { margin: .35rem 0 0; color: #486581; font-size: .82rem; line-height: 1.4; }
+.consent-actions { display: flex; flex-shrink: 0; gap: .5rem; }
 .route-list { padding: 0; list-style: none; } .route-list li { padding: .7rem 0; border-bottom: 1px solid #e6edf3; font-size: .9rem; }
 .route-button { display: flex; width: 100%; justify-content: space-between; padding: 0; color: #102a43; background: transparent; text-align: left; font-weight: 500; }
 .route-button small { color: #627d98; }
 @media (max-width: 720px) { .workspace { grid-template-columns: 1fr; grid-template-rows: auto 65vh; } .map { min-height: 0; } .panel { padding: 1rem; } }
+@media (max-width: 720px) { .consent-banner { right: .6rem; bottom: .6rem; left: .6rem; display: block; } .consent-actions { margin-top: .75rem; justify-content: flex-end; } }

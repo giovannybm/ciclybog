@@ -31,6 +31,8 @@ const searchMessages = ref<Record<PointTarget, string>>({ origin: '', destinatio
 const searchTimers: Partial<Record<PointTarget, number>> = {}
 const searchSequence: Record<PointTarget, number> = { origin: 0, destination: 0 }
 const canInstall = computed(() => Boolean(installPrompt.value) && !isStandalone.value)
+const consentKey = 'ciclybog-analytics-consent'
+const showConsent = ref(false)
 let map: Map | undefined
 let router: RouterClient | undefined
 let bogotaGeometry: GeoJSON.Geometry | undefined
@@ -41,6 +43,7 @@ const routeCollection: GeoJSON.FeatureCollection<GeoJSON.LineString, RouteSegmen
 const hasRoute = ref(false)
 
 onMounted(async () => {
+  showConsent.value = !localStorage.getItem(consentKey)
   routes.value = await listRoutes()
   try {
     const boundaryResponse = await fetch('/data/bogota-boundary.geojson')
@@ -300,6 +303,16 @@ function selectSavedRoute(route: SavedRoute) { (map?.getSource('calculated-route
 async function install() {
   if (await promptInstall()) status.value = 'Ciclybog quedó instalada en este dispositivo.'
 }
+
+function setAnalyticsConsent(consent: 'accepted' | 'rejected') {
+  localStorage.setItem(consentKey, consent)
+  showConsent.value = false
+  if (consent === 'accepted') window.dispatchEvent(new Event('ciclybog:clarity-consent'))
+}
+
+function managePrivacy() {
+  showConsent.value = true
+}
 </script>
 
 <template>
@@ -349,8 +362,19 @@ async function install() {
         <div class="legend"><span><i class="swatch cycleway"></i>Cicloruta</span><span><i class="swatch conventional"></i>Vía convencional</span><span><i class="swatch unknown"></i>Desconocida</span></div>
         <h2>Mis rutas</h2><p v-if="!routes.length" class="empty">Tus rutas se almacenan localmente.</p><ul v-else class="route-list"><li v-for="route in routes" :key="route.id"><button class="route-button" type="button" @click="selectSavedRoute(route)">{{ route.name }} <small>{{ formatDistance(route.distanceMeters) }}</small></button></li></ul>
         <p class="hint">El motor usa un grafo OSM de Bogotá descargado en la primera carga. El color indica la infraestructura registrada en cada tramo.</p>
+        <button type="button" class="link privacy-link" @click="managePrivacy">Configurar privacidad</button>
       </aside>
       <div ref="mapElement" class="map" aria-label="Mapa de rutas ciclistas"></div>
     </section>
+    <aside v-if="showConsent" class="consent-banner" role="dialog" aria-label="Consentimiento de analítica">
+      <div>
+        <strong>Privacidad y analítica</strong>
+        <p>Usamos Microsoft Clarity de forma opcional para entender cómo se usa Ciclybog y mejorar la aplicación. Puedes aceptar o rechazar; el ruteo funciona igual.</p>
+      </div>
+      <div class="consent-actions">
+        <button type="button" class="secondary" @click="setAnalyticsConsent('rejected')">Rechazar</button>
+        <button type="button" @click="setAnalyticsConsent('accepted')">Aceptar</button>
+      </div>
+    </aside>
   </main>
 </template>

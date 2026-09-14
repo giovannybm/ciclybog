@@ -15,6 +15,16 @@ pnpm dev
 
 La aplicación calcula las rutas en el dispositivo con Rust/WASM dentro de un Web Worker. No existe un backend de ruteo.
 
+### Analítica con Microsoft Clarity
+
+Para activar Clarity, crea un proyecto en Microsoft Clarity y agrega su identificador al entorno:
+
+```sh
+VITE_CLARITY_PROJECT_ID=tu_project_id
+```
+
+La integración es opcional; sin esta variable no se carga Clarity.
+
 ## Uso
 
 - Toca el mapa para fijar el origen y luego el destino, o usa **📍 Mi ubicación como origen** / **🏁 Mi ubicación como destino**. El botón de geolocalización del mapa muestra y sigue tu posición. La ubicación requiere HTTPS o `localhost` y permiso del navegador.
