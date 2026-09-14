@@ -22,6 +22,6 @@ El precache incluye el shell y archivos `.bin` publicados. El estilo de demostra
 
 El script `scripts/download-bogota-osm-pbf.sh` descarga el extracto OSM PBF de Bogotá. El pipeline `rust/data-pipeline` lee nodos y vías OSM directamente, divide cada vía en sus nodos originales, respeta `oneway`/`junction=roundabout`, filtra accesos incompatibles con bicicleta y produce el formato binario propio. PMTiles queda reservado para la representación cartográfica. El extractor filtra clases relevantes para bicicletas, conserva sentidos y asigna multiplicadores de costo por infraestructura y tipo de vía. El motor compara la ruta físicamente más corta con la ruta preferida para bicicleta y limita el desvío preferido al 18%; así puede combinar ciclovías y vías convencionales sin forzar desvíos grandes. La clasificación visual no implica que una vía sea segura.
 
-El límite administrativo se actualiza con `npm run map:boundary:update`; la ventana rectangular `MAP_VIEW_BOUNDS` solo controla cuánto puede alejarse y desplazarse el mapa.
+El límite administrativo se actualiza con `pnpm map:boundary:update`; la ventana rectangular `MAP_VIEW_BOUNDS` solo controla cuánto puede alejarse y desplazarse el mapa.
 
-El formato conserva el grafo dirigido, adyacencias CSR y restricciones de giro, y se versiona mediante `Graph.version`. `npm run router:export-geojson` permite inspeccionar las aristas exactas en QGIS.
+El formato conserva el grafo dirigido, adyacencias CSR y restricciones de giro, y se versiona mediante `Graph.version`. `pnpm router:export-geojson` permite inspeccionar las aristas exactas en QGIS.
