@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import maplibregl, { type Map, type GeoJSONSource } from 'maplibre-gl'
 import * as pmtiles from 'pmtiles'
 import * as basemaps from '@protomaps/basemaps'
@@ -13,6 +13,8 @@ import type { CalculatedRoute, Coordinate, RouteSegmentProperties, SavedRoute } 
 type PointTarget = 'origin' | 'destination'
 
 const mapElement = ref<HTMLElement | null>(null)
+const searchCard = ref<HTMLElement | null>(null)
+const sheet = ref<HTMLElement | null>(null)
 const status = ref('Preparando tu mapa…')
 const routes = ref<SavedRoute[]>([])
 const calculatedRoutes = ref<CalculatedRoute[]>([])
@@ -33,6 +35,19 @@ const searchSequence: Record<PointTarget, number> = { origin: 0, destination: 0 
 const canInstall = computed(() => Boolean(installPrompt.value) && !isStandalone.value)
 const consentKey = 'ciclybog-analytics-consent'
 const showConsent = ref(false)
+
+// En móvil el mapa ocupa la pantalla: búsqueda flotante arriba y hoja deslizable abajo.
+const mobileQuery = window.matchMedia('(max-width: 720px)')
+const isMobile = ref(mobileQuery.matches)
+const sheetExpanded = ref(false)
+const searchOpen = ref(true)
+const searchFocused = ref(false)
+const searchOffset = ref(0)
+const sheetOffset = ref(0)
+const routeSummary = computed(() => `${originQuery.value || 'Origen'} → ${destinationQuery.value || 'Destino'}`)
+let layoutObserver: ResizeObserver | undefined
+let sheetDragStart: number | undefined
+let suppressSheetClick = false
 let map: Map | undefined
 let router: RouterClient | undefined
 let bogotaGeometry: GeoJSON.Geometry | undefined
@@ -43,7 +58,19 @@ const pmtilesUrl = import.meta.env.VITE_PMTILES_URL || '/data/bogota.pmtiles'
 const routeCollection: GeoJSON.FeatureCollection<GeoJSON.LineString, RouteSegmentProperties> = { type: 'FeatureCollection', features: [] }
 const hasRoute = ref(false)
 
+function handleViewportChange(event: MediaQueryListEvent) {
+  isMobile.value = event.matches
+  if (!event.matches) searchOpen.value = true
+}
+
 onMounted(async () => {
+  mobileQuery.addEventListener('change', handleViewportChange)
+  layoutObserver = new ResizeObserver(() => {
+    searchOffset.value = searchCard.value?.offsetHeight ?? 0
+    sheetOffset.value = sheet.value?.offsetHeight ?? 0
+  })
+  if (searchCard.value) layoutObserver.observe(searchCard.value)
+  if (sheet.value) layoutObserver.observe(sheet.value)
   showConsent.value = !localStorage.getItem(consentKey)
   routes.value = await listRoutes()
   try {
@@ -57,7 +84,7 @@ onMounted(async () => {
   }
   const style = createMapStyle()
   map = new maplibregl.Map({ container: mapElement.value!, style, center: BOGOTA_CENTER, zoom: 11, minZoom: 7, maxBounds: MAP_VIEW_BOUNDS })
-  map.addControl(new maplibregl.NavigationControl(), 'top-right')
+  map.addControl(new maplibregl.NavigationControl({ showCompass: !isMobile.value }), 'top-right')
   map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true, showAccuracyCircle: true }), 'top-right')
   map.on('load', async () => {
     addMapLayers()
@@ -66,7 +93,7 @@ onMounted(async () => {
       router = new RouterClient()
       await router.ready()
       routerReady.value = true
-      status.value = 'Elige un punto de partida y uno de llegada para comenzar.'
+      status.value = isMobile.value ? 'Busca un lugar o toca el mapa para elegir tu partida.' : 'Elige un punto de partida y uno de llegada para comenzar.'
       if (origin.value && destination.value) void calculateRoute()
     } catch (error) {
       status.value = 'No pudimos preparar el cálculo de rutas. Recarga la página e inténtalo de nuevo.'
@@ -105,7 +132,12 @@ function customizeBasemapLayer(layer: BasemapLayer): BasemapLayer {
   return customized
 }
 
-onUnmounted(() => { map?.remove(); router?.destroy() })
+onUnmounted(() => {
+  mobileQuery.removeEventListener('change', handleViewportChange)
+  layoutObserver?.disconnect()
+  map?.remove()
+  router?.destroy()
+})
 
 function addMapLayers() {
   map!.addSource('bogota-cycleways-osm', { type: 'geojson', data: '/data/bogota-cycleways.geojson' })
@@ -132,24 +164,64 @@ function addMapLayers() {
   map!.addLayer({ id: 'route-points', type: 'circle', source: 'route-points', paint: { 'circle-radius': 7, 'circle-color': ['match', ['get', 'kind'], 'origin', '#2563eb', '#dc2626'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } })
 }
 
+/** Margen visible del mapa: en móvil descuenta la búsqueda flotante y la hoja inferior. */
+function mapPadding(): maplibregl.PaddingOptions {
+  if (!isMobile.value || !mapElement.value) return { top: 60, bottom: 60, left: 60, right: 60 }
+  const height = mapElement.value.clientHeight
+  // Medidas de layout, no getBoundingClientRect: la hoja puede estar animando su transform.
+  let top = (searchCard.value ? searchCard.value.offsetTop + searchCard.value.offsetHeight : 0) + 16
+  // +36 px para que la atribución del mapa no tape el destino.
+  let bottom = (sheet.value?.offsetHeight ?? 0) + 52
+  // MapLibre ignora el encuadre si los márgenes superan el alto disponible.
+  const scale = Math.min(1, (height * 0.75) / Math.max(top + bottom, 1))
+  top *= scale
+  bottom *= scale
+  return { top, bottom, left: 24, right: 56 }
+}
+
+async function fitToCoordinates(coordinates: number[][]) {
+  if (!map || !coordinates.length) return
+  await nextTick()
+  const first = coordinates[0] as [number, number]
+  const bounds = coordinates.reduce((box, point) => box.extend(point as [number, number]), new maplibregl.LngLatBounds(first, first))
+  map.fitBounds(bounds, { padding: mapPadding(), maxZoom: 17, duration: 700 })
+}
+
+async function focusPoint(point: Coordinate) {
+  await nextTick()
+  if (!map) return
+  // `padding` en flyTo queda fijo en el mapa y desplazaría encuadres posteriores; `offset` no.
+  const { top = 0, bottom = 0, left = 0, right = 0 } = mapPadding()
+  map.flyTo({ center: point, zoom: Math.max(map.getZoom(), 16), offset: [(left - right) / 2, (top - bottom) / 2] })
+}
+
 function isSelectable(point: Coordinate) {
   return bogotaGeometry ? isInsideGeometry(point, bogotaGeometry) : isInsideBogota(point)
 }
 
 function handleMapClick(event: maplibregl.MapMouseEvent) {
+  sheetExpanded.value = false
   const point: Coordinate = [event.lngLat.lng, event.lngLat.lat]
   if (!isSelectable(point)) { status.value = 'Selecciona un punto dentro de Bogotá.'; return }
   if (origin.value && destination.value) {
     destination.value = undefined
-    setPoint('origin', point)
+    destinationQuery.value = ''
+    setPoint('origin', point, 'Punto en el mapa')
   } else {
-    setPoint(origin.value ? 'destination' : 'origin', point)
+    setPoint(origin.value ? 'destination' : 'origin', point, 'Punto en el mapa')
   }
 }
 
-function setPoint(target: PointTarget, point: Coordinate) {
-  if (target === 'origin') origin.value = point
-  else destination.value = point
+function setPoint(target: PointTarget, point: Coordinate, label?: string) {
+  if (target === 'origin') {
+    origin.value = point
+    if (label) originQuery.value = label
+    originSuggestions.value = []
+  } else {
+    destination.value = point
+    if (label) destinationQuery.value = label
+    destinationSuggestions.value = []
+  }
   selectedRoute.value = 0
   calculatedRoutes.value = []
   clearRoute()
@@ -167,8 +239,8 @@ function useMyLocation(target: PointTarget) {
       locating.value = undefined
       const point: Coordinate = [position.coords.longitude, position.coords.latitude]
       if (!isSelectable(point)) { status.value = 'Tu ubicación está fuera de Bogotá. Elige un punto dentro de la ciudad.'; return }
-      map?.flyTo({ center: point, zoom: Math.max(map.getZoom(), 15) })
-      setPoint(target, point)
+      setPoint(target, point, 'Mi ubicación')
+      if (!(origin.value && destination.value)) void focusPoint(point)
     },
     error => {
       locating.value = undefined
@@ -212,8 +284,12 @@ async function calculateRoute() {
     const calculated = await router.route(origin.value, destination.value, 2)
     if (!calculated.length) throw new Error('No encontramos una ruta en bicicleta entre esos puntos.')
     calculatedRoutes.value = calculated
+    if (isMobile.value) {
+      searchOpen.value = false
+      sheetExpanded.value = false
+    }
     selectRoute(0)
-    status.value = calculated.length > 1 ? `Se encontraron ${calculated.length} rutas. Elige una en la lista.` : `Ruta calculada: ${formatDistance(calculated[0].distanceMeters)}.`
+    status.value = calculated.length > 1 ? `Encontramos ${calculated.length} rutas. Elige la que prefieras.` : `Ruta calculada: ${formatDistance(calculated[0].distanceMeters)}.`
   } catch (error) {
     calculatedRoutes.value = []
     clearRoute()
@@ -224,7 +300,9 @@ async function calculateRoute() {
 function selectRoute(index: number) {
   selectedRoute.value = index
   const route = calculatedRoutes.value[index]
-  if (route) renderRoute(route)
+  if (!route) return
+  renderRoute(route)
+  void fitToCoordinates(route.segments.flatMap(segment => segment.geometry.coordinates))
 }
 
 function renderRoute(route: CalculatedRoute) {
@@ -244,14 +322,49 @@ function clearRoute() { routeCollection.features = []; hasRoute.value = false; (
 function resetSelection() {
   origin.value = undefined
   destination.value = undefined
+  originQuery.value = ''
+  destinationQuery.value = ''
+  originSuggestions.value = []
+  destinationSuggestions.value = []
+  searchMessages.value = { origin: '', destination: '' }
   calculatedRoutes.value = []
+  searchOpen.value = true
   clearRoute()
   updatePointLayer()
   status.value = 'Elige un punto de partida en el mapa o usa tu ubicación.'
 }
 
-function warmGeocoder() {
+function openSearch() {
+  searchOpen.value = true
+  sheetExpanded.value = false
+}
+
+function onSearchFocus() {
+  searchFocused.value = true
+  sheetExpanded.value = false
   loadGeocoder().catch(() => undefined)
+}
+
+function onSearchBlur() {
+  searchFocused.value = false
+}
+
+function onSheetPointerDown(event: PointerEvent) {
+  sheetDragStart = event.clientY
+}
+
+function onSheetPointerUp(event: PointerEvent) {
+  if (sheetDragStart === undefined) return
+  const deltaY = event.clientY - sheetDragStart
+  sheetDragStart = undefined
+  if (Math.abs(deltaY) < 24) return
+  sheetExpanded.value = deltaY < 0
+  suppressSheetClick = true
+}
+
+function toggleSheet() {
+  if (suppressSheetClick) { suppressSheetClick = false; return }
+  sheetExpanded.value = !sheetExpanded.value
 }
 
 function searchPlace(target: PointTarget) {
@@ -282,11 +395,11 @@ function selectPlace(target: PointTarget, place: GeocoderResult) {
   const point: Coordinate = [place.lon, place.lat]
   if (!isSelectable(point)) { searchMessages.value[target] = `${place.text} está fuera del Distrito Capital.`; return }
   searchSequence[target]++
-  if (target === 'origin') { originQuery.value = place.text; originSuggestions.value = [] }
-  else { destinationQuery.value = place.text; destinationSuggestions.value = [] }
   searchMessages.value[target] = place.kind === 'estimated' ? `Ubicación estimada: ${place.detail}.` : ''
-  map?.flyTo({ center: point, zoom: Math.max(map.getZoom(), 16) })
-  setPoint(target, point)
+  // Cierra el teclado en móvil para devolverle la pantalla al mapa.
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  setPoint(target, point, place.text)
+  if (!(origin.value && destination.value)) void focusPoint(point)
 }
 
 function formatDistance(meters: number) { return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m` }
@@ -299,7 +412,12 @@ async function saveCurrentRoute() {
   await saveRoute(route); routes.value = [route, ...routes.value]; status.value = 'Ruta guardada en este dispositivo.'
 }
 
-function selectSavedRoute(route: SavedRoute) { (map?.getSource('calculated-route') as GeoJSONSource | undefined)?.setData(route.geometry); status.value = `${route.name} cargada desde almacenamiento local.` }
+function selectSavedRoute(route: SavedRoute) {
+  (map?.getSource('calculated-route') as GeoJSONSource | undefined)?.setData(route.geometry)
+  status.value = `${route.name} cargada desde almacenamiento local.`
+  sheetExpanded.value = false
+  void fitToCoordinates(route.geometry.features.flatMap(feature => feature.geometry.coordinates))
+}
 
 async function install() {
   if (await promptInstall()) status.value = 'Ciclybog quedó instalada en este dispositivo.'
@@ -317,7 +435,7 @@ function managePrivacy() {
 </script>
 
 <template>
-  <main class="app-shell">
+  <main class="app-shell" :class="{ searching: isMobile && searchFocused, 'sheet-expanded': sheetExpanded }" :style="{ '--search-offset': `${searchOffset}px`, '--sheet-offset': `${sheetOffset}px` }">
     <header class="topbar">
       <div><p class="eyebrow">CICLYBOG</p><h1>Muévete en bici por Bogotá</h1></div>
       <div class="topbar-actions">
@@ -331,43 +449,68 @@ function managePrivacy() {
     </header>
     <section class="workspace">
       <aside class="panel">
-        <p v-if="showIosHint" class="install-hint">Para instalar en iPhone o iPad: toca <strong>Compartir</strong> y luego <strong>Agregar a inicio</strong>. <button type="button" class="link" @click="showIosHint = false">Cerrar</button></p>
-        <p class="status" :class="{ loading: calculating || locating }" role="status">{{ status }}</p>
-        <div class="geocoder-fields">
-          <div class="geocoder-field">
-            <label for="origin-query">¿Desde dónde sales?</label>
-            <input id="origin-query" v-model="originQuery" type="search" autocomplete="off" placeholder="Ej.: Cra. 10 # 172B-50 o un lugar" @focus="warmGeocoder" @input="searchPlace('origin')" @keydown.enter.prevent="originSuggestions[0] && selectPlace('origin', originSuggestions[0])" />
-            <ul v-if="originSuggestions.length" class="suggestions"><li v-for="place in originSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @click="selectPlace('origin', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
-            <p v-else-if="searchMessages.origin" class="search-message">{{ searchMessages.origin }}</p>
+        <div ref="searchCard" class="search-card" :class="{ collapsed: isMobile && !searchOpen }">
+          <button v-if="isMobile && !searchOpen" type="button" class="search-summary" aria-label="Editar origen y destino" @click="openSearch">
+            <span class="route-dots" aria-hidden="true"><i class="dot origin"></i><i class="dot destination"></i></span>
+            <span class="summary-text">{{ routeSummary }}</span>
+            <span class="summary-edit">Editar</span>
+          </button>
+          <div v-else class="geocoder-fields">
+            <div class="geocoder-field">
+              <label for="origin-query">¿Desde dónde sales?</label>
+              <div class="input-row">
+                <i class="dot origin" aria-hidden="true"></i>
+                <input id="origin-query" v-model="originQuery" type="search" autocomplete="off" enterkeyhint="search" placeholder="Desde: dirección o lugar" @focus="onSearchFocus" @blur="onSearchBlur" @input="searchPlace('origin')" @keydown.enter.prevent="originSuggestions[0] && selectPlace('origin', originSuggestions[0])" />
+                <button type="button" class="locate-button" :class="{ busy: locating === 'origin' }" :disabled="Boolean(locating)" aria-label="Usar mi ubicación como origen" title="Usar mi ubicación" @click="useMyLocation('origin')">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="7" fill="none" /></svg>
+                </button>
+              </div>
+              <ul v-if="originSuggestions.length" class="suggestions"><li v-for="place in originSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @pointerdown.prevent @click="selectPlace('origin', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
+              <p v-else-if="searchMessages.origin" class="search-message">{{ searchMessages.origin }}</p>
+            </div>
+            <div class="geocoder-field">
+              <label for="destination-query">¿A dónde vas?</label>
+              <div class="input-row">
+                <i class="dot destination" aria-hidden="true"></i>
+                <input id="destination-query" v-model="destinationQuery" type="search" autocomplete="off" enterkeyhint="search" placeholder="Hasta: dirección o lugar" @focus="onSearchFocus" @blur="onSearchBlur" @input="searchPlace('destination')" @keydown.enter.prevent="destinationSuggestions[0] && selectPlace('destination', destinationSuggestions[0])" />
+                <button type="button" class="locate-button" :class="{ busy: locating === 'destination' }" :disabled="Boolean(locating)" aria-label="Usar mi ubicación como destino" title="Usar mi ubicación" @click="useMyLocation('destination')">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /><circle cx="12" cy="12" r="7" fill="none" /></svg>
+                </button>
+              </div>
+              <ul v-if="destinationSuggestions.length" class="suggestions"><li v-for="place in destinationSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @pointerdown.prevent @click="selectPlace('destination', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
+              <p v-else-if="searchMessages.destination" class="search-message">{{ searchMessages.destination }}</p>
+            </div>
           </div>
-          <div class="geocoder-field">
-            <label for="destination-query">¿A dónde vas?</label>
-            <input id="destination-query" v-model="destinationQuery" type="search" autocomplete="off" placeholder="Ej.: Calle 26 # 68-50 o un lugar" @focus="warmGeocoder" @input="searchPlace('destination')" @keydown.enter.prevent="destinationSuggestions[0] && selectPlace('destination', destinationSuggestions[0])" />
-            <ul v-if="destinationSuggestions.length" class="suggestions"><li v-for="place in destinationSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @click="selectPlace('destination', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
-            <p v-else-if="searchMessages.destination" class="search-message">{{ searchMessages.destination }}</p>
+        </div>
+
+        <section ref="sheet" class="sheet" :class="{ expanded: sheetExpanded }" aria-label="Rutas y opciones">
+          <button type="button" class="sheet-handle" :aria-expanded="sheetExpanded" :aria-label="sheetExpanded ? 'Contraer panel' : 'Ver más opciones'" @pointerdown="onSheetPointerDown" @pointerup="onSheetPointerUp" @click="toggleSheet"><span></span></button>
+          <p class="status" :class="{ loading: calculating || locating }" role="status">{{ status }}</p>
+          <ul v-if="calculatedRoutes.length" class="route-options">
+            <li v-for="(route, index) in calculatedRoutes" :key="index">
+              <button type="button" class="route-option" :class="{ selected: index === selectedRoute }" :aria-pressed="index === selectedRoute" @click="selectRoute(index)">
+                <strong>{{ index === 0 ? 'Ruta principal' : `Alternativa ${index}` }}</strong>
+                <span>{{ formatDistance(route.distanceMeters) }} · {{ cyclewayShare(route) }}% en cicloruta</span>
+              </button>
+            </li>
+          </ul>
+          <div v-if="!isMobile || origin || destination" class="actions">
+            <button v-if="!hasRoute || !isMobile" type="button" :disabled="!origin || !destination || calculating || !routerReady" @click="calculateRoute">{{ calculating ? 'Buscando ruta…' : 'Encontrar ruta' }}</button>
+            <button type="button" class="secondary" :disabled="!hasRoute" @click="saveCurrentRoute">Guardar</button>
+            <button type="button" class="secondary" :disabled="!origin && !destination" @click="resetSelection">Limpiar</button>
           </div>
-        </div>
-        <div class="location-actions">
-          <button type="button" class="secondary" :disabled="Boolean(locating)" @click="useMyLocation('origin')">{{ locating === 'origin' ? 'Ubicando…' : '📍 Mi ubicación como origen' }}</button>
-          <button type="button" class="secondary" :disabled="Boolean(locating)" @click="useMyLocation('destination')">{{ locating === 'destination' ? 'Ubicando…' : '🏁 Mi ubicación como destino' }}</button>
-        </div>
-        <div class="actions">
-          <button type="button" :disabled="!origin || !destination || calculating || !routerReady" @click="calculateRoute">{{ calculating ? 'Buscando ruta…' : 'Encontrar ruta' }}</button>
-          <button type="button" class="secondary" :disabled="!hasRoute" @click="saveCurrentRoute">Guardar</button>
-          <button type="button" class="secondary" :disabled="!origin && !destination" @click="resetSelection">Limpiar</button>
-        </div>
-        <ul v-if="calculatedRoutes.length" class="route-options">
-          <li v-for="(route, index) in calculatedRoutes" :key="index">
-            <button type="button" class="route-option" :class="{ selected: index === selectedRoute }" :aria-pressed="index === selectedRoute" @click="selectRoute(index)">
-              <strong>{{ index === 0 ? 'Ruta principal' : `Alternativa ${index}` }}</strong>
-              <span>{{ formatDistance(route.distanceMeters) }} · {{ cyclewayShare(route) }}% en cicloruta</span>
-            </button>
-          </li>
-        </ul>
-        <div class="legend"><span><i class="swatch cycleway"></i>Cicloruta</span><span><i class="swatch conventional"></i>Vía convencional</span><span><i class="swatch unknown"></i>Desconocida</span></div>
-        <h2>Mis rutas guardadas</h2><p v-if="!routes.length" class="empty">Aquí aparecerán las rutas que guardes. Se almacenan solo en este dispositivo.</p><ul v-else class="route-list"><li v-for="route in routes" :key="route.id"><button class="route-button" type="button" @click="selectSavedRoute(route)">{{ route.name }} <small>{{ formatDistance(route.distanceMeters) }}</small></button></li></ul>
-        <p class="hint">Las ciclorutas aparecen en azul. La ruta calculada muestra cada tramo según el tipo de vía.</p>
-        <button type="button" class="link privacy-link" @click="managePrivacy">Configurar privacidad</button>
+          <div class="sheet-details">
+            <p v-if="showIosHint" class="install-hint">Para instalar en iPhone o iPad: toca <strong>Compartir</strong> y luego <strong>Agregar a inicio</strong>. <button type="button" class="link" @click="showIosHint = false">Cerrar</button></p>
+            <button v-if="canInstall" type="button" class="install mobile-only" @click="install">Instalar app</button>
+            <div class="legend"><span><i class="swatch cycleway"></i>Cicloruta</span><span><i class="swatch conventional"></i>Vía convencional</span><span><i class="swatch unknown"></i>Desconocida</span></div>
+            <h2>Mis rutas guardadas</h2><p v-if="!routes.length" class="empty">Aquí aparecerán las rutas que guardes. Se almacenan solo en este dispositivo.</p><ul v-else class="route-list"><li v-for="route in routes" :key="route.id"><button class="route-button" type="button" @click="selectSavedRoute(route)">{{ route.name }} <small>{{ formatDistance(route.distanceMeters) }}</small></button></li></ul>
+            <p class="hint">Las ciclorutas aparecen en azul. La ruta calculada muestra cada tramo según el tipo de vía.</p>
+            <div class="sheet-links">
+              <button type="button" class="link privacy-link" @click="managePrivacy">Configurar privacidad</button>
+              <a class="link mobile-only" href="https://github.com/giovannybm" target="_blank" rel="noreferrer">GitHub</a>
+            </div>
+          </div>
+        </section>
       </aside>
       <div ref="mapElement" class="map" aria-label="Mapa de rutas ciclistas"></div>
     </section>

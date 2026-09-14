@@ -27,7 +27,8 @@ La integración es opcional; sin esta variable no se carga Clarity.
 
 ## Uso
 
-- Toca el mapa para fijar el origen y luego el destino, o usa **📍 Mi ubicación como origen** / **🏁 Mi ubicación como destino**. El botón de geolocalización del mapa muestra y sigue tu posición. La ubicación requiere HTTPS o `localhost` y permiso del navegador.
+- Toca el mapa para fijar el origen y luego el destino, busca una dirección o lugar, o usa el botón de ubicación junto a cada campo. El botón de geolocalización del mapa muestra y sigue tu posición. La ubicación requiere HTTPS o `localhost` y permiso del navegador.
+- En móvil (≤ 720 px) el mapa ocupa toda la pantalla: la búsqueda flota arriba y se contrae a un resumen cuando hay ruta, y una hoja inferior muestra estado, rutas y acciones. Desliza o toca la barra de la hoja para ver leyenda, rutas guardadas y privacidad. La ruta se encuadra dejando libres la búsqueda y la hoja.
 - El motor devuelve la ruta principal y hasta dos alternativas. La lista muestra la distancia y el porcentaje en cicloruta de cada una; la seleccionada es la que se guarda.
 - **Instalar app** aparece cuando el navegador lo permite (Chrome, Edge, Android). En iPhone/iPad se muestran instrucciones para *Compartir → Agregar a inicio*.
 
