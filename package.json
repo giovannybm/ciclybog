@@ -26,7 +26,8 @@
     "map:download": "./scripts/download-bogota-pmtiles.sh",
     "map:download-osm": "./scripts/download-bogota-osm-pbf.sh",
     "map:boundary:update": "node scripts/update-bogota-boundary.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "og:image": "node scripts/generate-og-image.mjs"
   },
   "dependencies": {
     "@mapbox/vector-tile": "^3.0.0",

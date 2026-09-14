@@ -8,12 +8,25 @@ import { VitePWA } from 'vite-plugin-pwa'
 const graphPath = 'public/data/bogota-graph.bin'
 const graphHash = existsSync(graphPath) ? createHash('sha1').update(readFileSync(graphPath)).digest('hex').slice(0, 16) : 'missing'
 
-export default defineConfig({
+// Las metaetiquetas Open Graph exigen URLs absolutas: VITE_SITE_URL o, en Netlify, la URL del sitio.
+const siteUrl = (process.env.VITE_SITE_URL || process.env.URL || '').replace(/\/$/, '')
+
+export default defineConfig(({ command }) => ({
   server: {
     allowedHosts: ['.ngrok-free.app']
   },
   define: { __GRAPH_HASH__: JSON.stringify(graphHash) },
   plugins: [
+    {
+      name: 'ciclybog-site-url',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: html => {
+          if (command === 'build' && !siteUrl) console.warn('[ciclybog] Define VITE_SITE_URL para que la vista previa en redes use URLs absolutas.')
+          return html.replaceAll('%SITE_URL%', siteUrl)
+        }
+      }
+    },
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -41,6 +54,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,bin,wasm,pmtiles,geojson}', 'data/bogota-geocoder.json'],
+        // La imagen de vista previa solo la usan las redes; no hace falta offline.
+        globIgnores: ['og-image.png'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         navigateFallback: '/index.html',
         runtimeCaching: [
@@ -58,4 +73,4 @@ export default defineConfig({
       }
     })
   ]
-})
+}))

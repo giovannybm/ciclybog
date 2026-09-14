@@ -103,6 +103,14 @@ Cada sugerencia indica cómo se obtuvo, por ejemplo *Interpolada entre Calle 172
 - El manifest declara `id`, `scope`, `lang`, `display: standalone` e íconos; el service worker (Workbox, `autoUpdate`) precachea el shell, el WASM, el grafo, las capas GeoJSON y el PMTiles.
 - La instalación y la geolocalización requieren un origen seguro: HTTPS en producción o `localhost` en desarrollo. Para probar en un teléfono dentro de la red local, sirve la app por HTTPS (por ejemplo con un túnel).
 
+## Vista previa en redes
+
+`index.html` incluye metaetiquetas Open Graph y Twitter (`summary_large_image`) para que los enlaces muestren título, descripción e imagen en WhatsApp, Facebook, LinkedIn, Slack y X.
+
+- La imagen es `public/og-image.png` (1200×630). Se regenera con `pnpm og:image` desde `scripts/generate-og-image.mjs`.
+- Las redes exigen URLs absolutas: en el build, `%SITE_URL%` se reemplaza por `VITE_SITE_URL` o, en Netlify, por la variable `URL` del sitio. Si ninguna existe, el build lo advierte.
+- Para revisar cómo se ve un enlace publicado usa el [Sharing Debugger de Facebook](https://developers.facebook.com/tools/debug/) o [opengraph.xyz](https://www.opengraph.xyz/). WhatsApp y otras redes guardan en caché la vista previa.
+
 ## Mapa offline con PMTiles
 
 Coloca el extracto PMTiles de Bogotá en `public/data/bogota.pmtiles` y activa `VITE_PMTILES_URL=/data/bogota.pmtiles`. La aplicación registra el protocolo `pmtiles://` y genera el estilo vectorial Protomaps localmente.
