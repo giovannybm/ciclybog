@@ -13,7 +13,7 @@ import type { CalculatedRoute, Coordinate, RouteSegmentProperties, SavedRoute } 
 type PointTarget = 'origin' | 'destination'
 
 const mapElement = ref<HTMLElement | null>(null)
-const status = ref('Cargando mapa y motor local…')
+const status = ref('Preparando tu mapa…')
 const routes = ref<SavedRoute[]>([])
 const calculatedRoutes = ref<CalculatedRoute[]>([])
 const selectedRoute = ref(0)
@@ -65,10 +65,10 @@ onMounted(async () => {
       router = new RouterClient()
       await router.ready()
       routerReady.value = true
-      status.value = 'Motor Rust listo. Selecciona el origen en el mapa o usa tu ubicación.'
+      status.value = 'Elige un punto de partida y uno de llegada para comenzar.'
       if (origin.value && destination.value) void calculateRoute()
     } catch (error) {
-      status.value = error instanceof Error ? error.message : 'No fue posible cargar el grafo de Bogotá.'
+      status.value = 'No pudimos preparar el cálculo de rutas. Recarga la página e inténtalo de nuevo.'
     }
   })
 })
@@ -137,7 +137,7 @@ function isSelectable(point: Coordinate) {
 
 function handleMapClick(event: maplibregl.MapMouseEvent) {
   const point: Coordinate = [event.lngLat.lng, event.lngLat.lat]
-  if (!isSelectable(point)) { status.value = 'Selecciona un punto dentro del Distrito Capital.'; return }
+  if (!isSelectable(point)) { status.value = 'Selecciona un punto dentro de Bogotá.'; return }
   if (origin.value && destination.value) {
     destination.value = undefined
     setPoint('origin', point)
@@ -154,18 +154,18 @@ function setPoint(target: PointTarget, point: Coordinate) {
   clearRoute()
   updatePointLayer()
   if (origin.value && destination.value) void calculateRoute()
-  else status.value = origin.value ? 'Origen seleccionado. Ahora selecciona el destino.' : 'Destino seleccionado. Ahora selecciona el origen.'
+  else status.value = origin.value ? 'Listo. Ahora elige tu destino.' : 'Elige primero tu punto de partida.'
 }
 
 function useMyLocation(target: PointTarget) {
-  if (!('geolocation' in navigator)) { status.value = 'Este navegador no permite obtener tu ubicación.'; return }
+  if (!('geolocation' in navigator)) { status.value = 'Tu navegador no permite compartir la ubicación.'; return }
   locating.value = target
-  status.value = 'Obteniendo tu ubicación…'
+  status.value = 'Buscando tu ubicación…'
   navigator.geolocation.getCurrentPosition(
     position => {
       locating.value = undefined
       const point: Coordinate = [position.coords.longitude, position.coords.latitude]
-      if (!isSelectable(point)) { status.value = 'Tu ubicación está fuera del Distrito Capital; selecciona el punto en el mapa.'; return }
+      if (!isSelectable(point)) { status.value = 'Tu ubicación está fuera de Bogotá. Elige un punto dentro de la ciudad.'; return }
       map?.flyTo({ center: point, zoom: Math.max(map.getZoom(), 15) })
       setPoint(target, point)
     },
@@ -178,9 +178,9 @@ function useMyLocation(target: PointTarget) {
 }
 
 function describeGeolocationError(error: GeolocationPositionError) {
-  if (error.code === error.PERMISSION_DENIED) return 'Permiso de ubicación denegado. Habilítalo en la configuración del navegador o selecciona el punto en el mapa.'
-  if (error.code === error.TIMEOUT) return 'La ubicación tardó demasiado. Inténtalo de nuevo o selecciona el punto en el mapa.'
-  return 'No fue posible determinar tu ubicación. Selecciona el punto en el mapa.'
+  if (error.code === error.PERMISSION_DENIED) return 'No tenemos permiso para usar tu ubicación. Puedes elegir el punto directamente en el mapa.'
+  if (error.code === error.TIMEOUT) return 'No encontramos tu ubicación a tiempo. Inténtalo de nuevo o elige el punto en el mapa.'
+  return 'No pudimos determinar tu ubicación. Elige el punto directamente en el mapa.'
 }
 
 function isInsideGeometry(point: Coordinate, geometry: GeoJSON.Geometry): boolean {
@@ -206,17 +206,17 @@ function isInsidePolygon(point: Coordinate, polygon: number[][][]): boolean {
 async function calculateRoute() {
   if (!router || !routerReady.value || !origin.value || !destination.value) return
   calculating.value = true
-  status.value = 'Calculando ruta en Rust/WASM…'
+  status.value = 'Buscando la mejor ruta…'
   try {
     const calculated = await router.route(origin.value, destination.value, 2)
-    if (!calculated.length) throw new Error('No existe una ruta ciclista entre esos puntos.')
+    if (!calculated.length) throw new Error('No encontramos una ruta en bicicleta entre esos puntos.')
     calculatedRoutes.value = calculated
     selectRoute(0)
     status.value = calculated.length > 1 ? `Se encontraron ${calculated.length} rutas. Elige una en la lista.` : `Ruta calculada: ${formatDistance(calculated[0].distanceMeters)}.`
   } catch (error) {
     calculatedRoutes.value = []
     clearRoute()
-    status.value = error instanceof Error ? error.message : 'No se pudo calcular la ruta.'
+    status.value = error instanceof Error ? error.message : 'No pudimos calcular la ruta. Prueba con otros puntos.'
   } finally { calculating.value = false }
 }
 
@@ -246,7 +246,7 @@ function resetSelection() {
   calculatedRoutes.value = []
   clearRoute()
   updatePointLayer()
-  status.value = 'Selecciona el origen en el mapa o usa tu ubicación.'
+  status.value = 'Elige un punto de partida en el mapa o usa tu ubicación.'
 }
 
 function warmGeocoder() {
@@ -269,11 +269,11 @@ async function runSearch(target: PointTarget) {
     // Ignora respuestas de búsquedas anteriores que terminan tarde.
     if (sequence !== searchSequence[target]) return
     suggestions.value = results
-    searchMessages.value[target] = results.length ? '' : 'Sin coincidencias. Revisa la dirección (p. ej. Cra. 10 # 172B-50) o toca el mapa.'
+    searchMessages.value[target] = results.length ? '' : 'No encontramos ese lugar. Revisa la dirección o selecciónalo en el mapa.'
   } catch (error) {
     if (sequence !== searchSequence[target]) return
     suggestions.value = []
-    searchMessages.value[target] = error instanceof Error ? error.message : 'No fue posible buscar la dirección.'
+    searchMessages.value[target] = 'No pudimos buscar ese lugar. Inténtalo de nuevo o selecciónalo en el mapa.'
   }
 }
 
@@ -318,10 +318,10 @@ function managePrivacy() {
 <template>
   <main class="app-shell">
     <header class="topbar">
-      <div><p class="eyebrow">CICLYBOG · RUTEO LOCAL</p><h1>Rutas de bicicleta en Bogotá</h1></div>
+      <div><p class="eyebrow">CICLYBOG</p><h1>Muévete en bici por Bogotá</h1></div>
       <div class="topbar-actions">
         <button v-if="canInstall" type="button" class="install" @click="install">Instalar app</button>
-        <span class="offline-badge">● Sin backend de ruteo</span>
+        <span class="offline-badge">● Rutas disponibles sin conexión</span>
       </div>
     </header>
     <section class="workspace">
@@ -330,13 +330,13 @@ function managePrivacy() {
         <p class="status" :class="{ loading: calculating || locating }" role="status">{{ status }}</p>
         <div class="geocoder-fields">
           <div class="geocoder-field">
-            <label for="origin-query">Origen</label>
+            <label for="origin-query">¿Desde dónde sales?</label>
             <input id="origin-query" v-model="originQuery" type="search" autocomplete="off" placeholder="Ej.: Cra. 10 # 172B-50 o un lugar" @focus="warmGeocoder" @input="searchPlace('origin')" @keydown.enter.prevent="originSuggestions[0] && selectPlace('origin', originSuggestions[0])" />
             <ul v-if="originSuggestions.length" class="suggestions"><li v-for="place in originSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @click="selectPlace('origin', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
             <p v-else-if="searchMessages.origin" class="search-message">{{ searchMessages.origin }}</p>
           </div>
           <div class="geocoder-field">
-            <label for="destination-query">Destino</label>
+            <label for="destination-query">¿A dónde vas?</label>
             <input id="destination-query" v-model="destinationQuery" type="search" autocomplete="off" placeholder="Ej.: Calle 26 # 68-50 o un lugar" @focus="warmGeocoder" @input="searchPlace('destination')" @keydown.enter.prevent="destinationSuggestions[0] && selectPlace('destination', destinationSuggestions[0])" />
             <ul v-if="destinationSuggestions.length" class="suggestions"><li v-for="place in destinationSuggestions" :key="`${place.text}-${place.lon}-${place.lat}`"><button type="button" @click="selectPlace('destination', place)"><span>{{ place.text }}</span><small>{{ place.detail }}</small></button></li></ul>
             <p v-else-if="searchMessages.destination" class="search-message">{{ searchMessages.destination }}</p>
@@ -347,7 +347,7 @@ function managePrivacy() {
           <button type="button" class="secondary" :disabled="Boolean(locating)" @click="useMyLocation('destination')">{{ locating === 'destination' ? 'Ubicando…' : '🏁 Mi ubicación como destino' }}</button>
         </div>
         <div class="actions">
-          <button type="button" :disabled="!origin || !destination || calculating || !routerReady" @click="calculateRoute">{{ calculating ? 'Calculando…' : 'Calcular ruta' }}</button>
+          <button type="button" :disabled="!origin || !destination || calculating || !routerReady" @click="calculateRoute">{{ calculating ? 'Buscando ruta…' : 'Encontrar ruta' }}</button>
           <button type="button" class="secondary" :disabled="!hasRoute" @click="saveCurrentRoute">Guardar</button>
           <button type="button" class="secondary" :disabled="!origin && !destination" @click="resetSelection">Limpiar</button>
         </div>
@@ -360,8 +360,8 @@ function managePrivacy() {
           </li>
         </ul>
         <div class="legend"><span><i class="swatch cycleway"></i>Cicloruta</span><span><i class="swatch conventional"></i>Vía convencional</span><span><i class="swatch unknown"></i>Desconocida</span></div>
-        <h2>Mis rutas</h2><p v-if="!routes.length" class="empty">Tus rutas se almacenan localmente.</p><ul v-else class="route-list"><li v-for="route in routes" :key="route.id"><button class="route-button" type="button" @click="selectSavedRoute(route)">{{ route.name }} <small>{{ formatDistance(route.distanceMeters) }}</small></button></li></ul>
-        <p class="hint">El motor usa un grafo OSM de Bogotá descargado en la primera carga. El color indica la infraestructura registrada en cada tramo.</p>
+        <h2>Mis rutas guardadas</h2><p v-if="!routes.length" class="empty">Aquí aparecerán las rutas que guardes. Se almacenan solo en este dispositivo.</p><ul v-else class="route-list"><li v-for="route in routes" :key="route.id"><button class="route-button" type="button" @click="selectSavedRoute(route)">{{ route.name }} <small>{{ formatDistance(route.distanceMeters) }}</small></button></li></ul>
+        <p class="hint">Las ciclorutas aparecen en azul. La ruta calculada muestra cada tramo según el tipo de vía.</p>
         <button type="button" class="link privacy-link" @click="managePrivacy">Configurar privacidad</button>
       </aside>
       <div ref="mapElement" class="map" aria-label="Mapa de rutas ciclistas"></div>
