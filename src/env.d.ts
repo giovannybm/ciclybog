@@ -3,6 +3,20 @@
 
 declare const __GRAPH_HASH__: string
 
+interface ImportMetaEnv {
+  readonly VITE_MAP_STYLE_URL?: string
+  readonly VITE_ROUTE_GRAPH_URL?: string
+  readonly VITE_PMTILES_URL?: string
+  readonly VITE_CLARITY_PROJECT_ID?: string
+  readonly VITE_SITE_URL?: string
+  /** '1' cuando la app se compila para ir embebida bajo un subpath: sin PWA ni analítica. */
+  readonly VITE_EMBED?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>

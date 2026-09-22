@@ -1,4 +1,5 @@
 import type { CalculatedRoute, Coordinate } from '../types'
+import { assetFromEnv } from './assets'
 import { getGraph, saveGraph } from './db'
 
 interface RouterWorkerResponse { id: number; ok: boolean; routes?: CalculatedRoute[]; error?: string }
@@ -22,12 +23,13 @@ export class RouterClient {
   private async loadGraph(): Promise<void> {
     let bytes = await getGraph()
     if (!bytes) {
-      const response = await fetch(import.meta.env.VITE_ROUTE_GRAPH_URL || '/data/bogota-graph.bin')
+      const response = await fetch(assetFromEnv(import.meta.env.VITE_ROUTE_GRAPH_URL, 'data/bogota-graph.bin'))
       if (!response.ok) throw new Error('No se encontró el grafo ciclista de Bogotá')
       bytes = await response.arrayBuffer()
       await saveGraph(bytes)
     }
-    await this.request({ type: 'load', bytes }, [bytes])
+    // El worker no puede deducir la base de despliegue por su cuenta: se la pasamos.
+    await this.request({ type: 'load', bytes, baseUrl: import.meta.env.BASE_URL }, [bytes])
   }
 
   async route(origin: Coordinate, destination: Coordinate, alternatives = 1): Promise<CalculatedRoute[]> {

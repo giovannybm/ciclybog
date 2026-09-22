@@ -11,6 +11,7 @@
     "preinstall": "npx only-allow pnpm",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "build:embed": "vue-tsc -b && VITE_BASE_PATH=/demos/ciclybog/ VITE_EMBED=1 vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b",
     "pwa:assets": "pwa-assets-generator",

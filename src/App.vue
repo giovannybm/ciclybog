@@ -7,6 +7,7 @@ import { listRoutes, saveRoute } from './lib/db'
 import { BOGOTA_CENTER, isInsideBogota, MAP_VIEW_BOUNDS } from './lib/bogota-boundary'
 import { installPrompt, isStandalone, needsIosInstructions, promptInstall } from './lib/install'
 import { RouterClient } from './lib/router-client'
+import { asset, assetFromEnv } from './lib/assets'
 import { loadGeocoder, searchGeocoder, type GeocoderResult } from './lib/geocoder'
 import type { CalculatedRoute, Coordinate, RouteSegmentProperties, SavedRoute } from './types'
 
@@ -54,7 +55,7 @@ let bogotaGeometry: GeoJSON.Geometry | undefined
 
 const mapStyle = import.meta.env.VITE_MAP_STYLE_URL || 'https://demotiles.maplibre.org/style.json'
 // Usa el extracto local por defecto; la variable solo permite reemplazarlo.
-const pmtilesUrl = import.meta.env.VITE_PMTILES_URL || '/data/bogota.pmtiles'
+const pmtilesUrl = assetFromEnv(import.meta.env.VITE_PMTILES_URL, 'data/bogota.pmtiles')
 const routeCollection: GeoJSON.FeatureCollection<GeoJSON.LineString, RouteSegmentProperties> = { type: 'FeatureCollection', features: [] }
 const hasRoute = ref(false)
 
@@ -71,10 +72,12 @@ onMounted(async () => {
   })
   if (searchCard.value) layoutObserver.observe(searchCard.value)
   if (sheet.value) layoutObserver.observe(sheet.value)
-  showConsent.value = !localStorage.getItem(consentKey)
+  // El build embebido no carga Clarity, así que pedir consentimiento no tendría
+  // objeto y el aviso solo taparía el mapa durante la demostración.
+  showConsent.value = !import.meta.env.VITE_EMBED && !localStorage.getItem(consentKey)
   routes.value = await listRoutes()
   try {
-    const boundaryResponse = await fetch('/data/bogota-boundary.geojson')
+    const boundaryResponse = await fetch(asset('data/bogota-boundary.geojson'))
     if (boundaryResponse.ok) {
       const boundary = await boundaryResponse.json() as GeoJSON.Feature<GeoJSON.Geometry>
       bogotaGeometry = boundary.geometry
@@ -93,6 +96,9 @@ onMounted(async () => {
       router = new RouterClient()
       await router.ready()
       routerReady.value = true
+      // Al embeber la app, el contenedor necesita saber cuándo el motor está
+      // realmente listo: el evento `load` del iframe ocurre mucho antes.
+      if (window.parent !== window) window.parent.postMessage({ type: 'ciclybog:ready' }, '*')
       status.value = isMobile.value ? 'Busca un lugar o toca el mapa para elegir tu partida.' : 'Elige un punto de partida y uno de llegada para comenzar.'
       if (origin.value && destination.value) void calculateRoute()
     } catch (error) {
@@ -140,7 +146,7 @@ onUnmounted(() => {
 })
 
 function addMapLayers() {
-  map!.addSource('bogota-cycleways-osm', { type: 'geojson', data: '/data/bogota-cycleways.geojson' })
+  map!.addSource('bogota-cycleways-osm', { type: 'geojson', data: asset('data/bogota-cycleways.geojson') })
   map!.addLayer({
     id: 'bogota-cycleways-default',
     type: 'line',
@@ -153,9 +159,9 @@ function addMapLayers() {
       'line-width': ['interpolate', ['linear'], ['zoom'], 9, 0.8, 11, 1.4, 13, 2.2, 15, 4, 18, 8]
     }
   })
-  map!.addSource('bogota-mask', { type: 'geojson', data: '/data/bogota-mask.geojson' })
+  map!.addSource('bogota-mask', { type: 'geojson', data: asset('data/bogota-mask.geojson') })
   map!.addLayer({ id: 'bogota-mask', type: 'fill', source: 'bogota-mask', paint: { 'fill-color': '#ffffff', 'fill-opacity': 1 } })
-  map!.addSource('bogota-boundary', { type: 'geojson', data: '/data/bogota-boundary.geojson' })
+  map!.addSource('bogota-boundary', { type: 'geojson', data: asset('data/bogota-boundary.geojson') })
   map!.addLayer({ id: 'bogota-boundary', type: 'line', source: 'bogota-boundary', paint: { 'line-color': '#102a43', 'line-width': 2, 'line-dasharray': [2, 2] } })
   map!.addSource('calculated-route', { type: 'geojson', data: routeCollection })
   map!.addLayer({ id: 'route-segments-casing', type: 'line', source: 'calculated-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-width': 9, 'line-opacity': 0.25, 'line-color': '#102a43' } })

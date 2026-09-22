@@ -1,6 +1,16 @@
 # Ciclybog
 
-PWA instalable en Vue 3 + MapLibre para calcular y guardar rutas ciclistas en Bogotá, con un motor de ruteo propio en Rust/WASM que corre en el dispositivo.
+PWA instalable para planificar rutas en bicicleta por Bogotá. Ciclybog combina Vue 3, MapLibre y un motor de ruteo propio en Rust/WASM que corre directamente en el dispositivo.
+
+La aplicación permite buscar direcciones con un índice local, elegir puntos desde el mapa o la ubicación del dispositivo, comparar rutas alternativas y guardar recorridos. El cálculo no depende de un backend de ruteo y puede funcionar sin conexión después de instalar los datos locales.
+
+## Requisitos
+
+- Node.js 22 o compatible.
+- pnpm 10 o superior.
+- Rust estable y `wasm-bindgen-cli` para regenerar el motor WASM o los datos.
+
+El desarrollo de la interfaz solo necesita Node.js y pnpm; Rust es necesario para ejecutar las pruebas y comandos del pipeline.
 
 ## Inicio rápido
 
@@ -13,6 +23,8 @@ cp .env.example .env
 pnpm dev
 ```
 
+Abre la URL que muestra Vite, normalmente `http://localhost:5173`.
+
 La aplicación calcula las rutas en el dispositivo con Rust/WASM dentro de un Web Worker. No existe un backend de ruteo.
 
 ### Analítica con Microsoft Clarity
@@ -24,6 +36,20 @@ VITE_CLARITY_PROJECT_ID=tu_project_id
 ```
 
 La integración es opcional; sin esta variable no se carga Clarity.
+
+### Variables de entorno
+
+Todas las variables son opcionales durante el desarrollo. Los valores por defecto cargan los artefactos locales incluidos en `public/data/`.
+
+| Variable | Uso |
+| --- | --- |
+| `VITE_CLARITY_PROJECT_ID` | Activa la analítica de Microsoft Clarity después del consentimiento del usuario. |
+| `VITE_MAP_STYLE_URL` | Estilo remoto de MapLibre cuando no se usa PMTiles local. |
+| `VITE_PMTILES_URL` | Ruta al archivo PMTiles local o remoto. |
+| `VITE_ROUTE_GRAPH_URL` | Ruta alternativa al grafo binario de ruteo. |
+| `VITE_SITE_URL` | URL pública usada para canonical, Open Graph y Twitter/X. |
+
+El archivo `.env.example` contiene la plantilla mínima para comenzar.
 
 ## Uso
 
@@ -102,6 +128,25 @@ Cada sugerencia indica cómo se obtuvo, por ejemplo *Interpolada entre Calle 172
 - `pnpm pwa:assets` regenera los íconos (64, 192, 512, maskable y apple-touch) desde `public/favicon.svg`.
 - El manifest declara `id`, `scope`, `lang`, `display: standalone` e íconos; el service worker (Workbox, `autoUpdate`) precachea el shell, el WASM, el grafo, las capas GeoJSON y el PMTiles.
 - La instalación y la geolocalización requieren un origen seguro: HTTPS en producción o `localhost` en desarrollo. Para probar en un teléfono dentro de la red local, sirve la app por HTTPS (por ejemplo con un túnel).
+
+## Build y despliegue
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm preview
+```
+
+El proyecto está configurado para Netlify con `pnpm build` y `dist/` como directorio publicado. Define `VITE_SITE_URL` en producción si el dominio no está disponible automáticamente en la variable `URL` de Netlify.
+
+También existe un build para insertar la aplicación bajo `/demos/ciclybog/`:
+
+```sh
+pnpm build:embed
+```
+
+Ese comando genera `dist-embed/`, no registra service worker y desactiva la analítica.
 
 ## Vista previa en redes
 

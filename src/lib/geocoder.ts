@@ -1,4 +1,5 @@
 import type { Coordinate } from '../types'
+import { asset } from './assets'
 
 // Proyección local en metros para Bogotá (latitud ~4,65°).
 const METERS_PER_DEGREE_LON = 111_320 * Math.cos(4.65 * Math.PI / 180)
@@ -451,7 +452,7 @@ export function search(index: GeocoderIndex, query: string, options: { near?: Co
 let indexPromise: Promise<GeocoderIndex> | undefined
 
 export function loadGeocoder(): Promise<GeocoderIndex> {
-  indexPromise ??= fetch('/data/bogota-geocoder.json')
+  indexPromise ??= fetch(asset('data/bogota-geocoder.json'))
     .then(response => {
       if (!response.ok) throw new Error('La búsqueda de direcciones no está instalada; selecciona el punto en el mapa.')
       return response.json() as Promise<RawGeocoderIndex>
