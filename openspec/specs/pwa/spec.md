@@ -1,33 +1,33 @@
-# Capacidad: PWA offline
+# Capability: offline PWA
 
-## Requisitos
+## Requirements
 
-### Requisito: instalabilidad
-La aplicación DEBE publicar un manifest con `id`, `name`, `short_name`, `start_url`, `scope`, `display: standalone`, `lang`, colores e íconos PNG de 192 y 512 px (incluido uno `maskable`), un `apple-touch-icon` y registrar un service worker con manejador `fetch`. Cuando el navegador lo permita, la interfaz DEBE ofrecer un botón “Instalar app”; en iOS DEBE indicar cómo agregarla a la pantalla de inicio.
+### Requirement: installability
+The application MUST publish a manifest with `id`, `name`, `short_name`, `start_url`, `scope`, `display: standalone`, `lang`, colors, 192 and 512 px PNG icons (including one `maskable` icon), an Apple Touch icon, and a service worker with a `fetch` handler. When the browser allows it, the interface MUST offer an **Install app** button; on iOS it MUST explain how to add the app to the Home Screen.
 
-#### Escenario: instalación en Chrome/Android
-- DADO que la app se sirve por HTTPS o localhost y el service worker está activo
-- CUANDO el navegador emite `beforeinstallprompt`
-- ENTONCES aparece “Instalar app” y al pulsarlo se muestra el diálogo nativo; tras instalar, el botón desaparece.
+#### Scenario: Chrome/Android installation
+- GIVEN the app is served over HTTPS or localhost and the service worker is active
+- WHEN the browser emits `beforeinstallprompt`
+- THEN **Install app** appears and opens the native dialog; after installation, the button disappears.
 
-### Requisito: datos del usuario
-La aplicación DEBE conservar las rutas guardadas localmente aunque el usuario cierre y vuelva a abrir la aplicación.
+### Requirement: user data
+The application MUST retain saved routes locally after the user closes and reopens it.
 
-### Requisito: transparencia offline
-La aplicación DEBE comunicar que el cálculo es local y que la disponibilidad geográfica depende del grafo instalado.
+### Requirement: offline transparency
+The application MUST communicate that routing is local and that geographic availability depends on the installed graph.
 
-### Requisito: precache de artefactos locales
-La aplicación DEBE incluir en la estrategia PWA el shell, los íconos, el módulo WASM, el grafo binario, las capas GeoJSON locales y el archivo PMTiles cuando estén publicados.
+### Requirement: local artifact precache
+The PWA strategy MUST include the shell, icons, WASM module, binary graph, local GeoJSON layers, and PMTiles when published.
 
-#### Escenario: primera carga sin conexión posterior
-- DADO que el shell, el grafo y el PMTiles fueron publicados y cacheados durante una carga inicial
-- CUANDO el usuario abre la PWA sin conexión
-- ENTONCES la aplicación puede cargar el mapa local y el motor de ruteo sin solicitar un servicio de backend.
+#### Scenario: first offline load
+- GIVEN the shell, graph, and PMTiles were published and cached during an initial load
+- WHEN the user opens the PWA offline
+- THEN the application can load the local map and routing engine without requesting a backend service.
 
-#### Escenario: actualización de artefactos
-- DADO que existe una nueva versión del shell o de los artefactos locales
-- CUANDO el service worker detecta la actualización
-- ENTONCES la PWA debe actualizarse mediante `autoUpdate` sin perder las rutas guardadas en IndexedDB.
+#### Scenario: artifact update
+- GIVEN a new version of the shell or local artifacts exists
+- WHEN the service worker detects the update
+- THEN the PWA updates through `autoUpdate` without losing routes stored in IndexedDB.
 
-### Requisito: gestor de paquetes
-El proyecto DEBE usar pnpm como único gestor de paquetes: `packageManager` declarado, `pnpm-lock.yaml` como único lockfile y scripts y documentación con `pnpm`.
+### Requirement: package manager
+The project MUST use pnpm as its only package manager: declare `packageManager`, keep `pnpm-lock.yaml` as the only lockfile, and use `pnpm` in scripts and documentation.

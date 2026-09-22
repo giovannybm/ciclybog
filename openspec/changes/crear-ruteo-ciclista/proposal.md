@@ -1,31 +1,31 @@
-# Propuesta: app PWA de ruteo ciclista local
+# Proposal: local cycling-routing PWA
 
-## Contexto
+## Context
 
-Se necesita una aplicación web instalable para dibujar rutas de bicicleta sobre un mapa, calcular el trazado en el dispositivo y conservar los datos del usuario sin depender de un backend.
+The project needs an installable web application to draw bike routes on a map, calculate them on the device, and retain user data without relying on a backend.
 
-## Solución propuesta
+## Proposed solution
 
-Crear una PWA en Vue 3 con MapLibre GL JS y un ruteador propio en Rust/WASM. La aplicación descargará un grafo binario ciclista versionado para Bogotá, lo guardará en IndexedDB, calculará rutas con A* dentro de un Web Worker y guardará las rutas segmentadas como GeoJSON con clasificación de infraestructura.
+Create a Vue 3 PWA with MapLibre GL JS and a custom Rust/WASM router. The application downloads a versioned Bogotá cycling graph, stores it in IndexedDB, calculates routes with A* inside a Web Worker, and saves routes as GeoJSON segments classified by infrastructure.
 
-## Alcance inicial
+## Initial scope
 
-- Mapa navegable con MapLibre/PMTiles y controles básicos.
-- Selección de origen/destino, ruta principal y alternativa calculadas localmente por Rust/WASM.
-- Diferenciación visual entre cicloruta y vía convencional.
-- Listado básico de rutas guardadas.
-- Instalabilidad PWA y shell cacheable.
-- Mensajes claros cuando falta el grafo o no hay conectividad.
+- Navigable MapLibre/PMTiles map with basic controls.
+- Origin/destination selection, plus primary and alternative routes calculated locally by Rust/WASM.
+- Visual distinction between cycleways and conventional roads.
+- Basic saved-route list.
+- PWA installability and a cacheable shell.
+- Clear messages when the graph is missing or connectivity is unavailable.
 
-## Fuera de alcance inicial
+## Initial out of scope
 
-- Sincronización entre dispositivos, cuentas o backend.
-- Navegación giro a giro o garantía de seguridad vial.
-- Procesamiento del PBF de OSM dentro de la app; la generación se realiza en el pipeline Rust.
-- Geocodificación y búsqueda de direcciones; se implementará como el cambio independiente `agregar-geocodificador-local`.
+- Cross-device synchronization, accounts, or a backend.
+- Turn-by-turn navigation or road-safety guarantees.
+- Processing the OSM PBF inside the app; generation happens in the Rust pipeline.
+- Geocoding and address search; implemented by the independent `agregar-geocodificador-local` change.
 
-## Riesgos y mitigaciones
+## Risks and mitigations
 
-- El resultado depende del grafo: versionar el área, fuente OSM, fecha y perfil ciclista junto al binario.
-- La cobertura PMTiles y el grafo deben mantenerse sincronizados: versionar área, fecha, licencia y fuente OSM antes de producción.
-- El binario puede ser grande: medir tamaño, carga progresiva y límites de área.
+- Results depend on the graph: version the area, OSM source, date, and cycling profile with the binary.
+- PMTiles coverage and graph coverage must remain synchronized: version area, date, license, and OSM source before production.
+- The binary may be large: measure size, progressive loading, and area limits.

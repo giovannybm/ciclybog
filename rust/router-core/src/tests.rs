@@ -112,7 +112,7 @@ fn falls_back_to_shortest_when_detour_is_too_long() {
 
 #[test]
 fn snaps_on_edges_and_splits_two_way_streets_without_detour() {
-    // A(0,0) ─ B(4,0) calle doble sentido; A ─ C(0,2) hacia el norte.
+    // A(0,0) ─ B(4,0) two-way road; A ─ C(0,2) heading north.
     let graph = build(
         &[(0.0, 0.0), (4.0, 0.0), (0.0, 2.0)],
         vec![way(0, 1, "calle", 1), way(0, 2, "carrera", 2)],
@@ -120,7 +120,7 @@ fn snaps_on_edges_and_splits_two_way_streets_without_detour() {
     );
     let routes = graph.route(&request((1.0, 0.05), (0.0, 1.5), 0)).unwrap();
     let route = &routes[0];
-    // 1 cuadra hacia A + 1,5 hacia el norte; salir hacia B y volver serían ~8,5 pasos.
+    // One block toward A + 1.5 north; leaving toward B and returning would be ~8.5 steps.
     assert!(route.distance_meters < 2.7 * STEP * METERS_PER_DEGREE, "{}", route.distance_meters);
     let start = route.segments[0].geometry[0];
     assert!((start.lon - point(1.0, 0.0).lon).abs() < 1e-9 && start.lat.abs() < 1e-9);
@@ -154,9 +154,9 @@ fn respects_one_way_on_shared_edge() {
 fn rejects_points_far_from_the_network() {
     let graph = build(&[(0.0, 0.0), (4.0, 0.0)], vec![way(0, 1, "calle", 1)], vec![]);
     let origin_error = graph.route(&request((2.0, 5.0), (1.0, 0.0), 0)).unwrap_err();
-    assert!(origin_error.contains("origen"), "{origin_error}");
+    assert!(origin_error.contains("origin"), "{origin_error}");
     let destination_error = graph.route(&request((1.0, 0.0), (2.0, 5.0), 0)).unwrap_err();
-    assert!(destination_error.contains("destino"), "{destination_error}");
+    assert!(destination_error.contains("destination"), "{destination_error}");
 }
 
 /// S(0) ─calle 1─ V(1) ─calle 3─ T(2); S ─calle 2 (rodeo)─ V.
@@ -184,7 +184,7 @@ fn uses_another_arrival_when_the_cheapest_one_forbids_the_turn() {
         only: false,
     });
     let routes = graph.route(&request((0.5, 0.0), (2.0, 1.5), 0)).unwrap();
-    // La llegada directa a V no puede girar hacia "salida": retrocede hasta S y toma el rodeo.
+    // The direct arrival at V cannot turn onto "exit": it backtracks to S and takes the detour.
     let route_names = names(&routes[0]);
     assert_eq!(route_names.last(), Some(&"salida"), "{route_names:?}");
     assert!(route_names.contains(&"rodeo"), "{route_names:?}");
@@ -221,7 +221,7 @@ fn no_u_turn_on_same_way_still_allows_going_straight() {
 
 #[test]
 fn ignores_one_way_traps_outside_the_main_component() {
-    // Red principal en y=0; espolón de sentido único X(1,1)→Y(1,1.5) sin salida.
+    // Main network at y=0; one-way spur X(1,1)→Y(1,1.5) with no exit.
     let mut spur = way(3, 4, "trampa", 9);
     spur.two_way = false;
     let mut entry = way(1, 3, "entrada", 8);
@@ -264,7 +264,7 @@ fn merges_consecutive_segments_with_same_attributes() {
     assert_eq!(routes[0].segments[0].geometry.len(), 4);
 }
 
-/// Búsqueda exhaustiva independiente (Bellman-Ford sobre estados por arista).
+/// Independent exhaustive search (Bellman-Ford over edge states).
 fn brute_force_cost(graph: &PreparedGraph, query: &Query) -> f64 {
     let total = graph.graph.edges.len() + query.edges.len();
     let mut costs = vec![f64::INFINITY; total];

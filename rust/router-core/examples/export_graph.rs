@@ -7,9 +7,9 @@ fn main() {
         eprintln!("Uso: export_graph <graph.bin> <output.geojson>");
         std::process::exit(2);
     }
-    let graph = Graph::from_bytes(&fs::read(&args[1]).expect("No se pudo leer el grafo"))
-        .expect("Grafo inválido");
-    let mut output = BufWriter::new(fs::File::create(&args[2]).expect("No se pudo crear el GeoJSON"));
+    let graph = Graph::from_bytes(&fs::read(&args[1]).expect("Could not read the graph"))
+        .expect("Invalid graph");
+    let mut output = BufWriter::new(fs::File::create(&args[2]).expect("Could not create GeoJSON"));
     write!(output, "{{\"type\":\"FeatureCollection\",\"features\":[").unwrap();
     for (index, edge) in graph.edges.iter().enumerate() {
         if index > 0 {

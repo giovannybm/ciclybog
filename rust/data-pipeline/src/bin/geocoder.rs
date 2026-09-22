@@ -3,7 +3,7 @@ use serde_json::json;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::{env, fs, io::BufReader, time::UNIX_EPOCH};
 
-/// Etiquetas que convierten un elemento con nombre en un lugar buscable.
+/// Tags that turn a named element into a searchable place.
 const PLACE_KEYS: [&str; 10] = [
     "amenity",
     "shop",
@@ -49,7 +49,7 @@ fn centroid(points: &[Point]) -> Point {
     (lon / count, lat / count)
 }
 
-/// Douglas-Peucker en metros locales; conserva la forma de la vía para cruzarla con otras.
+/// Douglas-Peucker in local meters; preserves the road shape for intersections with others.
 fn simplify(points: &[Point], tolerance: f64) -> Vec<Point> {
     if points.len() <= 2 {
         return points.to_vec();
@@ -111,10 +111,10 @@ fn collect(
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 3 {
-        eprintln!("Uso: geocoder <input.osm.pbf> <output.json>");
+        eprintln!("Usage: geocoder <input.osm.pbf> <output.json>");
         std::process::exit(2);
     }
-    let file = fs::File::open(&args[1]).expect("No se pudo abrir el PBF");
+    let file = fs::File::open(&args[1]).expect("Could not open PBF");
     let source_modified = file
         .metadata()
         .and_then(|metadata| metadata.modified())
@@ -128,7 +128,7 @@ fn main() {
     let mut addresses = Vec::new();
 
     for object in reader.iter() {
-        match object.expect("PBF inválido") {
+        match object.expect("Invalid PBF") {
             OsmObj::Node(node) => {
                 let point = (node.lon(), node.lat());
                 coordinates.insert(node.id.0, point);
@@ -158,7 +158,7 @@ fn main() {
                 }
                 collect(&way.tags, centroid(&points), &mut places, &mut addresses);
             }
-            // Las relaciones requieren ensamblar miembros; sus lugares suelen existir también como nodo o vía.
+            // Relations require assembling members; their places also usually exist as a node or way.
             OsmObj::Relation(_) => {}
         }
     }
@@ -193,10 +193,10 @@ fn main() {
             .map(|(street, number, point)| json!([street, number, round(point.0), round(point.1)]))
             .collect::<Vec<_>>(),
     });
-    let bytes = serde_json::to_vec(&output).expect("No se pudo serializar el índice");
-    fs::write(&args[2], &bytes).expect("No se pudo escribir el índice");
+    let bytes = serde_json::to_vec(&output).expect("Could not serialize the index");
+    fs::write(&args[2], &bytes).expect("Could not write the index");
     println!(
-        "Índice geocoder v2: {street_count} vías con nombre, {} lugares, {} direcciones, {:.1} MB",
+        "Geocoder index v2: {street_count} named roads, {} places, {} addresses, {:.1} MB",
         places.len(),
         addresses.len(),
         bytes.len() as f64 / 1_000_000.0

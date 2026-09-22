@@ -14,7 +14,7 @@ function syntheticIndex(withCalle172B = true): RawGeocoderIndex {
       { name: 'Carrera 10', lines: [[LON, LAT, LON, LAT + 0.01]] },
       { name: 'Calle 172', lines: [horizontal(LAT + 0.002, LON - 0.003, LON + 0.003)] },
       { name: 'Calle 172A', lines: [horizontal(LAT + 0.003, LON - 0.003, LON + 0.003)] },
-      // No toca la Carrera 10: termina ~330 m al occidente, como en OSM.
+      // Does not touch Carrera 10: it ends ~330 m west, as in OSM.
       ...(withCalle172B ? [{ name: 'Calle 172 B', lines: [horizontal(LAT + 0.004, LON - 0.006, LON - 0.003)] }] : []),
       { name: 'Calle 173', lines: [horizontal(LAT + 0.005, LON - 0.003, LON + 0.003)] }
     ],
@@ -34,13 +34,13 @@ describe('parseAddress', () => {
     }
   })
 
-  it('asigna el cuadrante a la vía que corresponde', () => {
+  it('assigns the quadrant to the correct road', () => {
     expect(parseAddress('Calle 26 Sur # 13-20')).toMatchObject({ street: { type: 'calle', number: 26, quadrant: 'sur' }, cross: { type: 'carrera', number: 13, quadrant: '' }, plate: 20 })
     expect(parseAddress('Carrera 10 # 17-20 Sur')).toMatchObject({ street: { quadrant: '' }, cross: { number: 17, quadrant: 'sur' } })
     expect(parseAddress('Calle 13 # 5-20 Este')).toMatchObject({ cross: { type: 'carrera', number: 5, quadrant: 'este' } })
   })
 
-  it('reconoce bis, avenidas y vías sin cruce', () => {
+  it('recognizes bis, avenues, and roads without a cross street', () => {
     expect(parseAddress('Cl 72 bis a # 10 - 34')).toMatchObject({ street: { number: 72, bis: true, bisLetter: 'a' }, cross: { number: 10 }, plate: 34 })
     expect(parseAddress('Av. Calle 26 # 68-50')).toMatchObject({ street: { type: 'calle', number: 26 }, cross: { number: 68 } })
     expect(parseAddress('Cra 10')).toEqual({ street: expect.objectContaining({ type: 'carrera', number: 10 }) })
@@ -58,23 +58,23 @@ describe('parseStreetName', () => {
 })
 
 describe('search', () => {
-  it('prolonga la calle cruzada hasta la carrera y aplica la placa', () => {
+  it('extends the cross street to the carrera and applies the house number', () => {
     const [result] = search(buildGeocoderIndex(syntheticIndex()), 'Cra. 10 172b 50')
-    expect(result).toMatchObject({ text: 'Carrera 10 # 172B-50', kind: 'estimated', confidence: 'media' })
+    expect(result).toMatchObject({ text: 'Carrera 10 # 172B-50', kind: 'estimated', confidence: 'medium' })
     expect(result.detail).toContain('Calle 172 B')
     expect(result.lon).toBeCloseTo(LON, 5)
     expect(result.lat).toBeCloseTo(LAT + 0.004 + 50 / METERS_PER_DEGREE_LAT, 5)
   })
 
-  it('interpola entre calles vecinas si la cruzada no existe', () => {
+  it('interpolates between neighboring streets when the cross street is missing', () => {
     const [result] = search(buildGeocoderIndex(syntheticIndex(false)), 'Carrera 10 # 172B-00')
-    expect(result.detail).toBe('Interpolada entre Calle 172A y Calle 173')
-    // Entre 172A y 173 solo falta 172B: queda en la mitad.
+    expect(result.detail).toBe('Interpolated between Calle 172A and Calle 173')
+    // Between 172A and 173, only 172B is missing, so it lands in the middle.
     expect(result.lat).toBeCloseTo(LAT + 0.004, 5)
   })
 
-  it('descarta prolongaciones que contradicen el orden y avanza la placa entre tramos', () => {
-    // Como en Usaquén: la Calle 172 B prolongada cae al norte de la Calle 173, y la carrera está partida.
+  it('rejects extensions that contradict street order and advances the house number across segments', () => {
+    // As in Usaquén: the extended Calle 172 B falls north of Calle 173, and the carrera is split.
     const raw: RawGeocoderIndex = {
       version: 2,
       streets: [
@@ -89,17 +89,17 @@ describe('search', () => {
       addresses: []
     }
     const [result] = search(buildGeocoderIndex(raw), 'Cra. 10 172b 50')
-    expect(result.detail).toBe('Interpolada entre Calle 172A y Calle 173')
+    expect(result.detail).toBe('Interpolated between Calle 172A and Calle 173')
     // Mitad entre 172A (+0,003) y 173 (+0,0042), y 50 m al norte cruzando al otro tramo.
     expect(result.lat).toBeCloseTo(LAT + 0.0036 + 50 / METERS_PER_DEGREE_LAT, 5)
   })
 
   it('prefiere direcciones registradas en OSM', () => {
     const [result] = search(buildGeocoderIndex(syntheticIndex()), 'AK 19 # 172B-90')
-    expect(result).toMatchObject({ kind: 'address', lon: -74.04797, confidence: 'alta' })
+    expect(result).toMatchObject({ kind: 'address', lon: -74.04797, confidence: 'high' })
   })
 
-  it('busca vías y lugares con abreviaturas y acentos', () => {
+  it('searches roads and places with abbreviations and accents', () => {
     const index = buildGeocoderIndex(syntheticIndex())
     expect(search(index, 'Cra 10')[0]).toMatchObject({ text: 'Carrera 10', kind: 'street' })
     expect(search(index, 'museo nac')[0]).toMatchObject({ text: 'Museo Nacional', kind: 'place' })
@@ -110,10 +110,10 @@ describe('search', () => {
 
   const realIndexPath = 'public/data/bogota-geocoder.json'
   const realIndex = existsSync(realIndexPath) ? JSON.parse(readFileSync(realIndexPath, 'utf8')) as RawGeocoderIndex : undefined
-  it.runIf(realIndex?.version === 2)('geocodifica Cra. 10 172b 50 con los datos reales de OSM', () => {
+  it.runIf(realIndex?.version === 2)('geocodes Cra. 10 172b 50 with real OSM data', () => {
     const [result] = search(buildGeocoderIndex(realIndex!), 'Cra. 10 172b 50')
     expect(result.text).toBe('Carrera 10 # 172B-50')
-    // Sobre la Carrera 10 (lon ≈ -74.033), entre la Calle 172 (4.7505) y la 173 (4.7524), hacia el norte.
+    // On Carrera 10 (lon ≈ -74.033), between Calle 172 (4.7505) and 173 (4.7524), toward the north.
     expect(result.lon).toBeGreaterThan(-74.0345)
     expect(result.lon).toBeLessThan(-74.0315)
     expect(result.lat).toBeGreaterThan(4.7512)

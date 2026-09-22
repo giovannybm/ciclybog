@@ -1,25 +1,25 @@
-# Propuesta: geocodificador local de Bogotá
+# Proposal: local geocoder for Bogotá
 
-## Objetivo
+## Objective
 
-Permitir que el usuario escriba una dirección o lugar y obtenga coordenadas para iniciar o terminar una ruta ciclista, sin backend y con soporte offline.
+Allow users to enter an address or place and get coordinates for the start or end of a bike route, without a backend and with offline support.
 
-## Fuente
+## Source
 
-El índice se generará desde `data/bogota.osm.pbf`. PMTiles seguirá siendo únicamente la fuente visual y `bogota-graph.bin` la fuente de ruteo.
+The index is generated from `data/bogota.osm.pbf`. PMTiles remains visual-only and `bogota-graph.bin` remains the routing source.
 
-## Alcance
+## Scope
 
-- Extraer direcciones, calles y lugares con etiquetas OSM.
-- Normalizar texto y construir un índice compacto local.
-- Buscar con coincidencia exacta y tolerante.
-- Mostrar sugerencias en Vue.
-- Pasar la coordenada elegida al snap del ruteador.
-- Agregar geocodificación inversa básica.
+- Extract addresses, roads, and OSM-tagged places.
+- Normalize text and build a compact local index.
+- Search with exact and tolerant matching.
+- Show suggestions in Vue.
+- Pass the selected coordinate to the router snap.
+- Add basic reverse geocoding.
 
-## Fuera de alcance
+## Out of scope
 
-- Cobertura completa de direcciones no presentes en OSM.
-- Servicio Nominatim/Pelias remoto en producción.
-- Navegación giro a giro.
-- Corrección automática de datos OSM incompletos.
+- Complete coverage of addresses missing from OSM.
+- A remote Nominatim/Pelias service in production.
+- Turn-by-turn navigation.
+- Automatic correction of incomplete OSM data.

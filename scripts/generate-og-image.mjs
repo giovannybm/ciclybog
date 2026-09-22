@@ -1,8 +1,8 @@
-// Genera la imagen de vista previa para redes (Open Graph / Twitter): `pnpm og:image`.
+// Generates the social preview image (Open Graph / Twitter): `pnpm og:image`.
 import { createRequire } from 'node:module'
 
-// sharp llega como dependencia de @vite-pwa/assets-generator; pnpm 12 no enlaza bien
-// la variante con peer opcional como dependencia directa, así que se resuelve desde ahí.
+// sharp arrives as a dependency of @vite-pwa/assets-generator; pnpm 12 does not
+// link the optional-peer variant correctly as a direct dependency, so resolve it there.
 const require = createRequire(import.meta.url)
 const sharp = createRequire(require.resolve('@vite-pwa/assets-generator/package.json'))('sharp')
 
@@ -10,7 +10,7 @@ const WIDTH = 1200
 const HEIGHT = 630
 const OUTPUT = 'public/og-image.png'
 
-// Trazado ilustrativo de calles, ciclorrutas y una ruta calculada sobre el lado derecho.
+// Illustrative drawing of streets, cycleways, and a calculated route on the right.
 const streets = Array.from({ length: 14 }, (_, index) => {
   const x = 640 + index * 44
   return `<path d="M${x} -20 L${x - 60} ${HEIGHT + 20}" />`
@@ -52,11 +52,11 @@ const svg = `
   </g>
   <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif" fill="#ffffff">
     <text x="190" y="138" font-size="34" font-weight="800" letter-spacing="6" fill="#7dd3c7">CICLYBOG</text>
-    <text x="72" y="270" font-size="68" font-weight="800">Muévete en bici</text>
-    <text x="72" y="350" font-size="68" font-weight="800">por Bogotá</text>
-    <text x="72" y="425" font-size="29" fill="#d9e2ec">Rutas por ciclorrutas y búsqueda de</text>
-    <text x="72" y="465" font-size="29" fill="#d9e2ec">direcciones, calculadas en tu dispositivo.</text>
-    <text x="72" y="555" font-size="24" font-weight="700" fill="#7dd3c7">● Funciona sin conexión · Datos de OpenStreetMap</text>
+    <text x="72" y="270" font-size="68" font-weight="800">Bike through Bogotá</text>
+    <text x="72" y="350" font-size="68" font-weight="800">with Ciclybog</text>
+    <text x="72" y="425" font-size="29" fill="#d9e2ec">Cycleway-first routes and local search</text>
+    <text x="72" y="465" font-size="29" fill="#d9e2ec">address search and on-device routing.</text>
+    <text x="72" y="555" font-size="24" font-weight="700" fill="#7dd3c7">● Works offline · OpenStreetMap data</text>
   </g>
 </svg>`
 

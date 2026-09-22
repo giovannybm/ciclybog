@@ -1,83 +1,83 @@
-# Delta: ruteo ciclista local
+# Delta: local cycling routing
 
-## MODIFICADO
+## MODIFIED
 
-### Requisito: calcular en el cliente
-La aplicación DEBE ejecutar una búsqueda A* de costo mínimo ponderado sobre estados por arista en un Web Worker mediante WebAssembly y NO DEBE requerir un endpoint de ruteo. La ruta devuelta DEBE ser óptima para el costo definido, incluidas penalizaciones y restricciones de giro.
+### Requirement: client-side calculation
+The application MUST run a weighted minimum-cost A* search over edge states in a Web Worker through WebAssembly and MUST NOT require a routing endpoint. The returned route MUST be optimal for the defined cost, including turn penalties and restrictions.
 
-#### Escenario: optimalidad
-- DADO un grafo con penalizaciones de giro
-- CUANDO se calcula una ruta
-- ENTONCES su costo coincide con el de una búsqueda exhaustiva de Dijkstra sobre estados por arista.
+#### Scenario: optimality
+- GIVEN a graph with turn penalties
+- WHEN a route is calculated
+- THEN its cost matches an exhaustive Dijkstra search over edge states.
 
-### Requisito: evitar componentes aislados
-El motor DEBE calcular una única vez, al cargar el grafo, la componente fuertemente conexa más grande y ajustar origen y destino solo a aristas cuyos dos extremos pertenezcan a ella.
+### Requirement: avoid isolated components
+The engine MUST calculate the largest strongly connected component once when loading the graph and snap origin and destination only to edges whose endpoints belong to it.
 
-#### Escenario: trampa de sentido único
-- DADO un punto cercano a una vía de la que no se puede salir respetando los sentidos
-- CUANDO se hace snap
-- ENTONCES el motor elige la vía navegable más cercana dentro de la componente principal.
+#### Scenario: one-way trap
+- GIVEN a point near a road that cannot be exited while respecting directions
+- WHEN snapping occurs
+- THEN the engine chooses the nearest navigable road inside the main component.
 
-### Requisito: snap sobre aristas
-El motor DEBE proyectar origen y destino sobre la arista navegable más cercana dentro de 250 m, usando un índice espacial, y dividir temporalmente esa arista y su gemela inversa sin modificar ni clonar el grafo base.
+### Requirement: snap to edges
+The engine MUST project the origin and destination onto the nearest navigable edge within 250 m using a spatial index, and temporarily split that edge and its reverse twin without modifying or cloning the base graph.
 
-#### Escenario: clic lejos de la red
-- DADO un punto a más de 250 m de cualquier vía navegable
-- CUANDO se calcula la ruta
-- ENTONCES el motor devuelve un error que indica que no hay vía apta cerca del origen o destino.
+#### Scenario: click far from the network
+- GIVEN a point is more than 250 m from any navigable road
+- WHEN a route is calculated
+- THEN the engine returns an error stating that no suitable road is near the origin or destination.
 
-#### Escenario: vía de doble sentido
-- DADO un punto sobre una vía de doble sentido
-- CUANDO la ruta debe salir hacia cualquiera de los dos extremos
-- ENTONCES el motor sale directamente en ese sentido sin recorrer la cuadra y regresar.
+#### Scenario: two-way road
+- GIVEN a point on a two-way road
+- WHEN the route must leave toward either endpoint
+- THEN the engine leaves directly in that direction without traversing and returning along the block.
 
-#### Escenario: origen y destino en la misma vía
-- DADO origen y destino sobre la misma arista en el sentido permitido
-- CUANDO se calcula la ruta
-- ENTONCES la ruta es el tramo directo entre ambas proyecciones.
+#### Scenario: origin and destination on one road
+- GIVEN origin and destination lie on the same edge in the permitted direction
+- WHEN a route is calculated
+- THEN the route is the direct segment between both projections.
 
-### Requisito: restricciones de giro OSM
-El motor DEBE impedir transiciones `no_*` y permitir únicamente la vía indicada por `only_*`. El pipeline DEBE ignorar restricciones con `except` que incluya `bicycle`, usar `restriction:bicycle` cuando exista e ignorar las restricciones específicas de otros vehículos o condicionales.
+### Requirement: OSM turn restrictions
+The engine MUST prevent `no_*` transitions and allow only the road specified by `only_*`. The pipeline MUST ignore restrictions whose `except` includes `bicycle`, use `restriction:bicycle` when present, and ignore restrictions specific to other vehicles or conditionals.
 
-#### Escenario: llegada alternativa a un nodo
-- DADO que la llegada más barata a un nodo tiene prohibido el giro necesario
-- CUANDO existe otra llegada al mismo nodo que sí lo permite
-- ENTONCES el motor encuentra la ruta usando esa otra llegada.
+#### Scenario: alternate arrival at a node
+- GIVEN the cheapest arrival at a node forbids the required turn
+- WHEN another arrival at the same node allows it
+- THEN the engine finds the route using that other arrival.
 
-### Requisito: preferir infraestructura ciclista
-El motor DEBE ponderar el costo de cada arista según su infraestructura y tipo de vía, y la distancia reportada DEBE seguir siendo la física.
+### Requirement: prefer cycling infrastructure
+The engine MUST weight each edge by infrastructure and road type, while reported distance MUST remain physical distance.
 
-- Una vía solo DEBE clasificarse como `cycleway` si es `highway=cycleway`, si `cycleway`, `cycleway:both`, `cycleway:left` o `cycleway:right` valen `track`, `lane`, `opposite_track` u `opposite_lane`, o si es un sendero o vía peatonal con acceso ciclista explícito.
-- Las vías peatonales sin acceso ciclista explícito NO DEBEN formar parte del grafo.
-- `bicycle=yes|designated|permissive|official|dismount` DEBE prevalecer sobre `access=no` y `vehicle=no`, y `bicycle=dismount` DEBE tener un costo alto.
-- `oneway:bicycle=no` y `cycleway*=opposite*` DEBEN habilitar el contraflujo ciclista.
-- La ruta preferida NO DEBE superar el 18% de desvío respecto a la más corta.
+- A road MUST be classified as `cycleway` only when it is `highway=cycleway`, when `cycleway`, `cycleway:both`, `cycleway:left`, or `cycleway:right` is `track`, `lane`, `opposite_track`, or `opposite_lane`, or when it is a path or pedestrian road with explicit bicycle access.
+- Pedestrian roads without explicit bicycle access MUST NOT enter the graph.
+- `bicycle=yes|designated|permissive|official|dismount` MUST take precedence over `access=no` and `vehicle=no`, and `bicycle=dismount` MUST have a high cost.
+- `oneway:bicycle=no` and `cycleway*=opposite*` MUST enable bicycle contraflow.
+- The preferred route MUST NOT exceed 18% detour from the shortest route.
 
-### Requisito: formato preparado para optimización
-El archivo binario DEBE conservar una versión explícita, índices CSR, restricciones de giro, tablas compartidas de textos y geometrías y nodos solo en puntos de decisión.
+### Requirement: optimization-ready format
+The binary file MUST retain an explicit version, CSR indexes, turn restrictions, shared string and geometry tables, and nodes only at decision points.
 
-## AGREGADO
+## ADDED
 
-### Requisito: rutas alternativas
-El motor DEBE intentar devolver alternativas que no superen 1,4 veces la distancia de la ruta principal ni compartan más del 80% de su distancia con una ruta ya aceptada. La interfaz DEBE permitir elegir entre ellas y mostrar distancia y porcentaje en ciclorruta.
+### Requirement: alternative routes
+The engine MUST attempt to return alternatives no more than 1.4 times the primary route distance and sharing no more than 80% of its distance with an accepted route. The interface MUST allow choosing among them and show distance and cycleway percentage.
 
-#### Escenario: selección de alternativa
-- DADO que el motor devuelve dos rutas
-- CUANDO el usuario elige la segunda
-- ENTONCES el mapa la pinta y “Guardar” persiste esa ruta marcada como alternativa.
+#### Scenario: select an alternative
+- GIVEN the engine returns two routes
+- WHEN the user chooses the second
+- THEN the map displays it and **Save** persists it marked as an alternative.
 
-### Requisito: invalidación del grafo en caché
-La clave del grafo en IndexedDB DEBE derivarse del contenido del `.bin` publicado, y las versiones anteriores DEBEN eliminarse al guardar una nueva.
+### Requirement: cached graph invalidation
+The IndexedDB graph key MUST derive from the published `.bin` content, and older versions MUST be removed when a new one is saved.
 
-### Requisito: ubicación del usuario
-La aplicación DEBE permitir usar la ubicación actual del dispositivo como origen o destino, validando que esté dentro de Bogotá y mostrando errores de permiso, disponibilidad o tiempo de espera.
+### Requirement: user location
+The application MUST allow the device's current location to be used as an origin or destination, validate that it is inside Bogotá, and show permission, availability, and timeout errors.
 
-#### Escenario: ubicación como origen
-- DADO que el usuario concede el permiso de ubicación y está en Bogotá
-- CUANDO pulsa “Mi ubicación como origen”
-- ENTONCES el origen se ubica en su posición y el mapa se centra en ella; si ya hay destino, se calcula la ruta.
+#### Scenario: location as origin
+- GIVEN the user grants location permission and is in Bogotá
+- WHEN they press **Use my location as origin**
+- THEN the origin is placed at their position and the map centers there; if a destination already exists, the route is calculated.
 
-#### Escenario: permiso denegado
-- DADO que el usuario rechaza el permiso
-- CUANDO pulsa el botón de ubicación
-- ENTONCES la aplicación explica que debe habilitar la ubicación y mantiene la selección manual.
+#### Scenario: permission denied
+- GIVEN the user rejects permission
+- WHEN they press the location button
+- THEN the application explains that location must be enabled and keeps manual selection available.

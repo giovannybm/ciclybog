@@ -8,7 +8,7 @@ pub struct Router {
 
 #[wasm_bindgen]
 impl Router {
-    /// Deserializa el grafo y construye una sola vez los índices de ruteo.
+    /// Deserializes the graph and builds routing indexes once.
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: &[u8]) -> Result<Router, JsValue> {
         PreparedGraph::from_bytes(bytes)

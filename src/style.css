@@ -26,7 +26,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
 .link, button.link { padding: 0; color: #0f766e; background: transparent; font-weight: 600; text-decoration: underline; }
 .install-hint { margin: 0 0 .5rem; padding: .7rem; border-radius: .45rem; background: #e6fffa; color: #234e52; font-size: .82rem; line-height: 1.45; }
 
-/* Búsqueda */
+/* Search */
 .geocoder-fields { display: grid; gap: .7rem; margin-bottom: .7rem; }
 .geocoder-field { display: grid; gap: .3rem; }
 .geocoder-field label { color: #334e68; font-size: .78rem; font-weight: 700; }
@@ -47,7 +47,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
 .suggestions small, .search-message { color: #627d98; font-size: .76rem; }
 .search-message { margin: 0; }
 
-/* Resultados y panel */
+/* Results and panel */
 .route-options { display: grid; gap: .4rem; margin: 0 0 .9rem; padding: 0; list-style: none; }
 .route-option { display: grid; gap: .15rem; width: 100%; border: 2px solid #d9e2ec; color: #102a43; background: #fff; text-align: left; font-weight: 500; }
 .route-option span { color: #486581; font-size: .82rem; }
@@ -68,7 +68,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
 .route-button { display: flex; width: 100%; justify-content: space-between; padding: 0; color: #102a43; background: transparent; text-align: left; font-weight: 500; }
 .route-button small { color: #627d98; }
 
-/* Móvil: el mapa ocupa toda la pantalla; búsqueda flotante arriba y hoja deslizable abajo. */
+/* Mobile: the map fills the screen; search floats above and the bottom sheet slides up. */
 @media (max-width: 720px) {
   .app-shell { position: fixed; inset: 0; min-height: 0; overflow: hidden; }
   .topbar { display: none; }
@@ -82,7 +82,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
   .geocoder-fields { gap: .4rem; margin: 0; }
   .geocoder-field { gap: .25rem; }
   .geocoder-field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-  /* 16 px evita el zoom automático de iOS al enfocar. */
+  /* 16 px prevents iOS from zooming automatically on focus. */
   .geocoder-field input { padding: .6rem .65rem; border-color: #d9e2ec; background: #f5f7fa; font-size: 16px; }
   .input-row { gap: .5rem; padding-left: .2rem; }
   .locate-button { width: 2.6rem; height: 2.6rem; }
@@ -97,7 +97,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
 
   .sheet { position: absolute; z-index: 2; right: 0; bottom: 0; left: 0; max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain; padding: 0 1rem calc(env(safe-area-inset-bottom) + .8rem); border-radius: 1.1rem 1.1rem 0 0; background: #fff; box-shadow: 0 -6px 24px #102a4324; transition: transform .25s ease, max-height .25s ease; }
   .sheet.expanded { max-height: 82dvh; }
-  /* Mientras se escribe, la hoja se oculta para dejar sitio al teclado y las sugerencias. */
+  /* While typing, hide the sheet to make room for the keyboard and suggestions. */
   .searching .sheet { transform: translateY(100%); }
   .sheet-handle { position: sticky; z-index: 1; top: 0; display: flex; width: calc(100% + 2rem); margin: 0 -1rem; justify-content: center; padding: .6rem 0 .5rem; border-radius: 0; background: #fff; touch-action: none; }
   .sheet-handle span { width: 2.6rem; height: .3rem; border-radius: 1rem; background: #bcccdc; }
@@ -113,7 +113,7 @@ button.install { color: #102a43; background: #7dd3c7; white-space: nowrap; }
   .legend { grid-template-columns: repeat(3, 1fr); font-size: .7rem; }
   .hint { margin-top: 1.2rem; }
 
-  /* Controles de MapLibre fuera de la búsqueda y de la hoja. */
+  /* Keep MapLibre controls outside the search card and bottom sheet. */
   .maplibregl-ctrl-top-right { top: calc(var(--search-offset) + env(safe-area-inset-top) + .6rem); transition: top .2s ease; }
   .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right { bottom: var(--sheet-offset); }
   .sheet-expanded .maplibregl-ctrl-top-right, .searching .maplibregl-ctrl-top-right { opacity: 0; pointer-events: none; }

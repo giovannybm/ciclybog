@@ -1,26 +1,26 @@
-# Tareas
+# Tasks
 
 ## Pipeline
-- [x] Clasificar ciclorruta solo con valores positivos de `cycleway`, `cycleway:both|left|right`.
-- [x] Filtrar restricciones de giro con `except=bicycle` y las específicas de otros vehículos; usar `restriction:bicycle`.
-- [x] Soportar contraflujo ciclista (`oneway:bicycle`, `cycleway*=opposite*`).
-- [x] Dar precedencia a `bicycle=*` sobre `access`/`vehicle`; tratar `bicycle=dismount`.
-- [x] Contraer el grafo a intersecciones con geometrías y textos compartidos (63 MB → 23 MB; 290.955 → 107.831 nodos).
-- [x] Pruebas unitarias de clasificación, sentido y restricciones.
+- [x] Classify cycleways only from positive `cycleway`, `cycleway:both|left|right` values.
+- [x] Filter turn restrictions with `except=bicycle` and vehicle-specific restrictions; use `restriction:bicycle`.
+- [x] Support bicycle contraflow (`oneway:bicycle`, `cycleway*=opposite*`).
+- [x] Give `bicycle=*` precedence over `access`/`vehicle`; handle `bicycle=dismount`.
+- [x] Contract the graph to intersections with shared geometry and strings (63 MB → 23 MB; 290,955 → 107,831 nodes).
+- [x] Add unit tests for classification, direction, and restrictions.
 
-## Motor
-- [x] Preparar índice al cargar: SCC principal, grilla espacial, restricciones indexadas.
-- [x] A* por aristas con penalización y restricciones de giro correctas.
-- [x] Snap con distancia máxima de 250 m, arista gemela y overlay sin clonar.
-- [x] Alternativas por penalización con control de solapamiento.
-- [x] Pruebas: optimalidad frente a búsqueda exhaustiva, giros prohibidos con llegada alternativa, `only_*`, `no_u_turn`, doble sentido sin retorno, snap lejano, misma arista, alternativas, SCC.
-- [x] Actualizar exportador GeoJSON e inspector.
+## Engine
+- [x] Prepare load-time indexes: main SCC, spatial grid, and indexed restrictions.
+- [x] Run edge-state A* with correct turn penalties and restrictions.
+- [x] Snap with a 250 m maximum, reverse twin, and non-cloning overlay.
+- [x] Generate penalty alternatives with overlap control.
+- [x] Test optimality against exhaustive search, forbidden turns with alternate arrivals, `only_*`, `no_u_turn`, two-way roads without return trips, far snaps, same-edge routes, alternatives, and SCC behavior.
+- [x] Update the GeoJSON exporter and inspector.
 
-## Frontend / PWA / herramientas
-- [x] Selector de alternativas con porcentaje en ciclorruta.
-- [x] Clave del grafo por hash de contenido y limpieza de claves anteriores.
-- [x] `noEmit` en `tsconfig.app.json` y eliminación de `.js` generados en `src/`.
-- [x] Migrar a pnpm (lockfile, `packageManager`, `only-allow`, scripts, README).
-- [x] Íconos y manifest instalables; botón “Instalar app” e instrucciones iOS.
-- [x] Usar mi ubicación como origen/destino y `GeolocateControl`.
-- [x] Regenerar grafo y WASM; medir tamaño y tiempos (nativo: ruta de 6 km en ~3 ms, antes 169 ms).
+## Frontend / PWA / tooling
+- [x] Add an alternative selector with cycleway percentage.
+- [x] Derive the graph key from content and clean previous keys.
+- [x] Add `noEmit` to `tsconfig.app.json` and remove generated `.js` files from `src/`.
+- [x] Migrate to pnpm (lockfile, `packageManager`, `only-allow`, scripts, README).
+- [x] Add installable icons and manifest, **Install app** button, and iOS instructions.
+- [x] Use my location as origin/destination and add `GeolocateControl`.
+- [x] Regenerate graph and WASM; measure size and timings (native: 6 km route in ~3 ms, previously 169 ms).

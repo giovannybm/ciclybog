@@ -1,62 +1,62 @@
-# Capacidad: geocodificación local de Bogotá
+# Capability: local Bogotá geocoding
 
-## Requisitos
+## Requirements
 
-### Requisito: índice local
-La aplicación DEBE poder buscar direcciones y lugares de Bogotá sin depender de un servicio de geocodificación en tiempo de ejecución. El índice DEBE generarse desde el extracto OSM PBF con `pnpm geocoder:generate`, distribuirse como artefacto local versionado (`public/data/bogota-geocoder.json`, `version: 2`) e incluirse en el precache de la PWA.
+### Requirement: local index
+The application MUST search Bogotá addresses and places without depending on a runtime geocoding service. The index MUST be generated from the OSM PBF extract with `pnpm geocoder:generate`, distributed as a versioned local artifact (`public/data/bogota-geocoder.json`, `version: 2`), and included in the PWA precache.
 
-El índice DEBE contener:
-- vías con nombre y su geometría simplificada (tolerancia 2 m), agrupadas por nombre;
-- lugares con nombre y etiqueta `amenity`, `shop`, `tourism`, `leisure`, `office`, `historic`, `public_transport`, `railway`, `healthcare`, `place` o `building`;
-- direcciones `addr:street` + `addr:housenumber`.
+The index MUST contain:
+- named roads and their simplified geometry (2 m tolerance), grouped by name;
+- named places with an `amenity`, `shop`, `tourism`, `leisure`, `office`, `historic`, `public_transport`, `railway`, `healthcare`, `place`, or `building` tag;
+- `addr:street` + `addr:housenumber` addresses.
 
-NO DEBE contener textos sin letras ni coordenadas ficticias.
+It MUST NOT contain text without letters or fabricated coordinates.
 
-#### Escenario: índice disponible
-- DADO que `bogota-geocoder.json` está publicado
-- CUANDO el usuario enfoca un campo de búsqueda
-- ENTONCES la aplicación carga el índice una sola vez y habilita la búsqueda.
+#### Scenario: index available
+- GIVEN `bogota-geocoder.json` is published
+- WHEN the user focuses a search field
+- THEN the application loads the index once and enables search.
 
-#### Escenario: índice ausente o desactualizado
-- DADO que el índice no está disponible o su versión no es 2
-- CUANDO el usuario intenta buscar una dirección
-- ENTONCES la interfaz informa que la búsqueda no está instalada y mantiene disponible la selección manual en el mapa.
+#### Scenario: missing or outdated index
+- GIVEN the index is unavailable or its version is not 2
+- WHEN the user searches for an address
+- THEN the interface reports that search is not installed and keeps manual map selection available.
 
-### Requisito: normalización
-El buscador DEBE ignorar diferencias de mayúsculas, acentos, signos (`#`, `-`, `.`, `No.`, `N°`) y separación entre números y letras (`172b` = `172 B`). DEBE reconocer abreviaturas comunes: `calle`/`cl`/`cll`/`ac`, `carrera`/`cra`/`cr`/`kr`/`k`/`ak`, `diagonal`/`dg`, `transversal`/`tv`/`tr` y `avenida`/`av`. Las palabras que coinciden con propiedades de objetos JavaScript (`constructor`, `toString`) NO DEBEN alterar la búsqueda.
+### Requirement: normalization
+The search MUST ignore differences in case, accents, punctuation (`#`, `-`, `.`, `No.`, `N°`), and spacing between numbers and letters (`172b` = `172 B`). It MUST recognize common abbreviations: `calle`/`cl`/`cll`/`ac`, `carrera`/`cra`/`cr`/`kr`/`k`/`ak`, `diagonal`/`dg`, `transversal`/`tv`/`tr`, and `avenida`/`av`. Words matching JavaScript object properties (`constructor`, `toString`) MUST NOT alter the search.
 
-### Requisito: nomenclatura bogotana
-El buscador DEBE interpretar direcciones con la forma `<tipo> <número>[letra][bis [letra]][sur|este] [#] <número cruzado>[letra][bis [letra]] [placa] [sur|este]` y ubicarlas aunque OSM no tenga la dirección registrada:
+### Requirement: Bogotá address format
+The search MUST parse addresses in the form `<type> <number>[letter][bis [letter]][sur|este] [#] <cross number>[letter][bis [letter]] [plate] [sur|este]` and locate them even when OSM has no registered address:
 
-1. Si existe una dirección OSM con la misma vía y número, DEBE devolverla primero con confianza alta.
-2. Si la vía cruzada toca la vía principal a ≤ 20 m, el ancla DEBE ser ese cruce.
-3. Si la vía cruzada no llega, DEBE prolongarse hasta 600 m, siempre que el punto resultante quede entre los cruces reales de número inmediatamente menor y mayor.
-4. En otro caso DEBE interpolarse entre esos cruces, repartiendo por orden de letras y bis.
-5. Desde el ancla DEBE avanzar la placa en metros (máximo 200) hacia los cruces de mayor número, continuando por los tramos contiguos de la misma vía.
+1. If an OSM address with the same road and number exists, it MUST be returned first with high confidence.
+2. If the cross street touches the main road within 20 m, the anchor MUST be that intersection.
+3. If the cross street does not reach it, it MUST be extended up to 600 m, as long as the resulting point falls between the immediately lower and higher real-numbered intersections.
+4. Otherwise it MUST be interpolated between those intersections, distributing by letter and bis order.
+5. From the anchor, the plate distance MUST be advanced in meters (maximum 200) toward higher-numbered intersections, continuing through adjacent segments of the same road.
 
-Cada resultado DEBE indicar cómo se obtuvo (cruce, prolongación o interpolación).
+Every result MUST explain how it was obtained (intersection, extension, or interpolation).
 
-#### Escenario: dirección sin registro en OSM
-- DADO el índice real de Bogotá, donde la Calle 172 B no toca la Carrera 10 y la Calle 173 la cruza al sur de esa prolongación
-- CUANDO el usuario busca `Cra. 10 172b 50`
-- ENTONCES el primer resultado es `Carrera 10 # 172B-50`, interpolado entre la Calle 172 y la Calle 173, sobre la Carrera 10 y desplazado hacia el norte.
+#### Scenario: address not registered in OSM
+- GIVEN the real Bogotá index, where Calle 172 B does not reach Carrera 10 and Calle 173 crosses it south of that extension
+- WHEN the user searches for `Cra. 10 172b 50`
+- THEN the first result is `Carrera 10 # 172B-50`, interpolated between Calle 172 and Calle 173 on Carrera 10 and shifted north.
 
-#### Escenario: cuadrantes
-- DADO `Calle 26 Sur # 13-20` o `Carrera 10 # 17-20 Sur`
-- CUANDO se interpreta la dirección
-- ENTONCES `Sur` se aplica a la calle correspondiente y `Este` a la carrera correspondiente.
+#### Scenario: quadrants
+- GIVEN `Calle 26 Sur # 13-20` or `Carrera 10 # 17-20 Sur`
+- WHEN the address is parsed
+- THEN `Sur` applies to the corresponding calle and `Este` to the corresponding carrera.
 
-### Requisito: coincidencia tolerante
-El buscador DEBE devolver resultados por prefijo de palabra sobre nombres de vías, lugares y direcciones, con coincidencia exacta para números. DEBE mostrar un máximo de ocho sugerencias, ordenadas por tipo de coincidencia y distancia al centro del mapa. Las búsquedas DEBEN aplicarse con retardo de escritura, y las respuestas de búsquedas anteriores DEBEN descartarse.
+### Requirement: tolerant matching
+The search MUST return word-prefix results for road, place, and address names, with exact matching for numbers. It MUST show at most eight suggestions, ordered by match type and distance from the map center. Searches MUST be debounced, and responses from older searches MUST be discarded.
 
-### Requisito: coordenadas utilizables para ruteo
-Cada resultado DEBE devolver coordenadas WGS84, texto visible, detalle, tipo (`address`, `estimated`, `street`, `place`) y confianza. Al seleccionarlo, la aplicación DEBE validar que esté dentro de Bogotá, centrar el mapa y enviar la coordenada al snap sobre aristas del ruteador.
+### Requirement: routable coordinates
+Each result MUST return WGS84 coordinates, visible text, detail, type (`address`, `estimated`, `street`, `place`), and confidence. When selected, the application MUST validate that it is inside Bogotá, center the map, and send the coordinate to the router's edge snap.
 
-### Requisito: geocodificación inversa
-El sistema DEBERÍA permitir convertir una coordenada seleccionada en el mapa a la dirección o lugar más cercano del índice local. Si no existe coincidencia, DEBE mostrar las coordenadas y permitir continuar con el ruteo.
+### Requirement: reverse geocoding
+The system SHOULD convert a coordinate selected on the map into the nearest address or place from the local index. If there is no match, it MUST show the coordinates and allow routing to continue.
 
-### Requisito: cobertura y atribución
-El índice DEBE conservar la fuente, el archivo PBF de origen y la atribución de OpenStreetMap. La ausencia de una dirección en OSM NO DEBE interpretarse como una dirección inválida.
+### Requirement: coverage and attribution
+The index MUST preserve its source, input PBF, and OpenStreetMap attribution. The absence of an address in OSM MUST NOT be interpreted as an invalid address.
 
-### Requisito: privacidad y offline
-La búsqueda DEBE ejecutarse localmente, sin enviar el texto ni las coordenadas del usuario a un tercero.
+### Requirement: privacy and offline use
+Search MUST run locally without sending the user's text or coordinates to a third party.

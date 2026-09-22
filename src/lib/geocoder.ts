@@ -1,15 +1,15 @@
 import type { Coordinate } from '../types'
 import { asset } from './assets'
 
-// Proyección local en metros para Bogotá (latitud ~4,65°).
+// Local projection in meters for Bogotá (latitude ~4.65°).
 const METERS_PER_DEGREE_LON = 111_320 * Math.cos(4.65 * Math.PI / 180)
 const METERS_PER_DEGREE_LAT = 110_574
-/** Distancia máxima para prolongar una vía cruzada que no alcanza la vía principal. */
+/** Maximum distance for extending a cross street that does not reach the main street. */
 const MAX_EXTENSION_METERS = 600
-/** Distancia máxima entre dos cruces usados para interpolar. */
+/** Maximum distance between two intersections used for interpolation. */
 const MAX_INTERPOLATION_SPAN_METERS = 2000
 const INTERPOLATION_WINDOW = 8
-/** Un cruce a menos de esta distancia se considera real y no prolongado. */
+/** An intersection within this distance is considered real rather than extended. */
 const RELIABLE_GAP_METERS = 20
 const MAX_PLATE_METERS = 200
 const DEFAULT_NEAR: Coordinate = [-74.0721, 4.711]
@@ -27,7 +27,7 @@ export interface GeocoderResult {
   lon: number
   lat: number
   kind: 'address' | 'estimated' | 'street' | 'place'
-  confidence: 'alta' | 'media' | 'baja'
+  confidence: 'high' | 'medium' | 'low'
 }
 
 export interface RawGeocoderIndex {
@@ -60,7 +60,7 @@ const TYPE_ALIASES: Record<string, StreetType> = Object.assign(Object.create(nul
   transversal: 'transversal', tv: 'transversal', tr: 'transversal', trans: 'transversal', transv: 'transversal', trv: 'transversal'
 })
 const WORD_ALIASES: Record<string, string> = Object.assign(Object.create(null), TYPE_ALIASES, { av: 'avenida', avda: 'avenida', cc: 'centro comercial', univ: 'universidad', hosp: 'hospital', pque: 'parque', oriente: 'este' })
-const KIND_LABELS: Record<string, string> = Object.assign(Object.create(null), { amenity: 'Lugar', shop: 'Comercio', tourism: 'Turismo', leisure: 'Recreación', office: 'Oficina', historic: 'Histórico', public_transport: 'Transporte público', railway: 'Transporte', healthcare: 'Salud', place: 'Sector', building: 'Edificio' })
+const KIND_LABELS: Record<string, string> = Object.assign(Object.create(null), { amenity: 'Place', shop: 'Shop', tourism: 'Tourism', leisure: 'Leisure', office: 'Office', historic: 'Historic site', public_transport: 'Public transport', railway: 'Railway', healthcare: 'Healthcare', place: 'Area', building: 'Building' })
 const AVENUE_WORDS = new Set(['avenida', 'av', 'avda'])
 const NUMBER_SEPARATORS = new Set(['no', 'nro', 'num', 'numero', 'n'])
 
@@ -106,14 +106,14 @@ function family(type: StreetType): 'calle' | 'carrera' {
   return type === 'calle' || type === 'diagonal' ? 'calle' : 'carrera'
 }
 
-/** Cuadrante válido para la familia de vía: las calles pueden ser "sur" y las carreras "este". */
+/** Valid quadrant for a street family: calles can be "sur" and carreras "este". */
 function quadrantFor(type: StreetType, quadrant: Quadrant): Quadrant {
   if (quadrant === 'sur') return family(type) === 'calle' ? 'sur' : ''
   if (quadrant === 'este') return family(type) === 'carrera' ? 'este' : ''
   return ''
 }
 
-/** Interpreta nomenclatura bogotana: "Cra. 10 172b 50", "Calle 26 Sur # 13-20", "KR 10 No. 172 B - 50". */
+/** Parses Bogotá addresses: "Cra. 10 172b 50", "Calle 26 Sur # 13-20", "KR 10 No. 172 B - 50". */
 export function parseAddress(query: string): ParsedAddress | undefined {
   const tokens = normalizeText(query).split(' ').filter(Boolean)
   let index = AVENUE_WORDS.has(tokens[0]) && TYPE_ALIASES[tokens[1]] ? 1 : 0
@@ -132,12 +132,12 @@ export function parseAddress(query: string): ParsedAddress | undefined {
   let plate: number | undefined
   if (/^\d+$/.test(tokens[index] ?? '')) plate = Number(tokens[index++])
   const [trailing] = readQuadrant(tokens, index)
-  // Un cuadrante que no aplica a la vía principal (p. ej. "Carrera 10 Sur") corresponde a la cruzada.
+  // A quadrant that does not apply to the main street (e.g. "Carrera 10 Sur") belongs to the cross street.
   const crossQuadrant = quadrantFor(crossType, trailing || (street.quadrant ? '' : afterMain))
   return { street, cross: { type: crossType, number: cross.number, letter: cross.letter, bis: cross.bis, bisLetter: cross.bisLetter, quadrant: crossQuadrant }, plate }
 }
 
-/** Interpreta nombres de vía OSM: "Avenida Carrera 10", "Calle 172 B", "Carrera 10 Bis A Este". */
+/** Parses OSM street names: "Avenida Carrera 10", "Calle 172 B", "Carrera 10 Bis A Este". */
 export function parseStreetName(name: string): StreetRef | undefined {
   const tokens = normalizeText(name).split(' ').filter(Boolean)
   const index = AVENUE_WORDS.has(tokens[0]) && TYPE_ALIASES[tokens[1]] ? 1 : 0
@@ -185,7 +185,7 @@ const subtract = (a: Point, b: Point): Point => ({ x: a.x - b.x, y: a.y - b.y })
 const lerp = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
 
 export function buildGeocoderIndex(raw: RawGeocoderIndex): GeocoderIndex {
-  if (raw.version !== 2) throw new Error('El índice de direcciones está desactualizado; ejecuta pnpm geocoder:generate.')
+  if (raw.version !== 2) throw new Error('The address index is outdated; run pnpm geocoder:generate.')
   const byKey = new Map<string, Street[]>()
   const byFamily = new Map<string, Street[]>()
   const entries: Entry[] = []
@@ -204,13 +204,13 @@ export function buildGeocoderIndex(raw: RawGeocoderIndex): GeocoderIndex {
       byFamily.set(familyKey, [...(byFamily.get(familyKey) ?? []), street])
     }
     const longest = lines.reduce((best, line) => line.length > best.length ? line : best)
-    entries.push({ text: name, detail: 'Vía', words: canonicalWords(name), point: longest[Math.floor(longest.length / 2)], kind: 'street', street })
+    entries.push({ text: name, detail: 'Street', words: canonicalWords(name), point: longest[Math.floor(longest.length / 2)], kind: 'street', street })
   }
   for (const [name, kind, lon, lat] of raw.places) {
-    entries.push({ text: name, detail: KIND_LABELS[kind.split('=')[0]] ?? 'Lugar', words: canonicalWords(name), point: toPoint(lon, lat), kind: 'place' })
+    entries.push({ text: name, detail: KIND_LABELS[kind.split('=')[0]] ?? 'Place', words: canonicalWords(name), point: toPoint(lon, lat), kind: 'place' })
   }
   const addresses: Address[] = raw.addresses.map(([street, number, lon, lat]) => ({ ref: parseStreetName(street), number: normalizeText(number), point: toPoint(lon, lat), text: `${street} # ${number}` }))
-  for (const address of addresses) entries.push({ text: address.text, detail: 'Dirección registrada en OSM', words: canonicalWords(address.text), point: address.point, kind: 'address' })
+  for (const address of addresses) entries.push({ text: address.text, detail: 'Address registered in OSM', words: canonicalWords(address.text), point: address.point, kind: 'address' })
   return { byKey, byFamily, entries, addresses }
 }
 
@@ -230,7 +230,7 @@ function nearestOnStreet(street: Street, point: Point) {
   return best
 }
 
-/** Cruce entre la vía principal y la cruzada; si no se tocan, prolonga los extremos de la cruzada. */
+/** Intersection between the main and cross streets; extends the cross street endpoints if needed. */
 function intersect(main: Street, cross: Street): { point: Point; gap: number } | undefined {
   const [minX, minY, maxX, maxY] = main.bbox
   const [crossMinX, crossMinY, crossMaxX, crossMaxY] = cross.bbox
@@ -273,7 +273,7 @@ const unit = (vector: Point): Point => {
   return { x: vector.x / length, y: vector.y / length }
 }
 
-/** Avanza sobre la vía; OSM la parte en varios tramos, así que continúa en el tramo contiguo. */
+/** Walks along a street; OSM splits it into segments, so continue through adjacent segments. */
 function walkAlong(street: Street, start: Point, direction: Point, meters: number): Point {
   const nearest = nearestOnStreet(street, start)
   let line = street.lines[nearest.line]
@@ -304,7 +304,7 @@ function walkAlong(street: Street, start: Point, direction: Point, meters: numbe
 
 interface CrossHit { value: number; name: string; exactType: boolean; point: Point; gap: number }
 
-/** Cruces reales inmediatamente menor y mayor que el número buscado, lo más cercanos entre sí. */
+/** Real intersections immediately below and above the requested number, as close as possible. */
 function bracket(hits: CrossHit[], target: number): [CrossHit, CrossHit] | undefined {
   const below = hits.filter(hit => hit.value < target)
   const above = hits.filter(hit => hit.value > target)
@@ -328,7 +328,7 @@ function isBetween(point: Point, [low, high]: [CrossHit, CrossHit]): boolean {
   return t >= 0 && t <= 1
 }
 
-/** Posición relativa por orden de letras: entre 172 y 173 con 172A conocida, 172B queda a 2/3. */
+/** Relative position by letter order: between 172 and 173, a known 172A puts 172B at 2/3. */
 function rankFraction(hits: CrossHit[], low: number, high: number, target: number): number {
   const values = [...new Set([...hits.map(hit => hit.value).filter(value => value > low && value < high), target])].sort((a, b) => a - b)
   return (values.indexOf(target) + 1) / (values.length + 1)
@@ -349,7 +349,7 @@ function geocodeNomenclature(index: GeocoderIndex, address: ParsedAddress): Geoc
   const cross = address.cross!
   const mains = index.byKey.get(refKey(address.street)) ?? []
   if (!mains.length) return undefined
-  // "Carrera 10" y "Avenida Carrera 10" son el mismo eje.
+  // "Carrera 10" and "Avenida Carrera 10" are the same corridor.
   const corridor: Street = {
     name: formatAddress({ street: address.street }),
     lines: mains.flatMap(main => main.lines),
@@ -372,23 +372,23 @@ function geocodeNomenclature(index: GeocoderIndex, address: ParsedAddress): Geoc
   let confidence: GeocoderResult['confidence']
   if (exact && exact.gap <= RELIABLE_GAP_METERS) {
     anchor = exact.point
-    detail = `Cruce con ${exact.name}`
-    confidence = 'alta'
+    detail = `Intersection with ${exact.name}`
+    confidence = 'high'
   } else if (exact && (!bounds || isBetween(exact.point, bounds))) {
     anchor = exact.point
-    detail = `Estimada prolongando ${exact.name} (${Math.round(exact.gap)} m)`
-    confidence = 'media'
+    detail = `Estimated by extending ${exact.name} (${Math.round(exact.gap)} m)`
+    confidence = 'medium'
   } else if (bounds) {
-    // La prolongación no existe o contradice el orden de los cruces reales: se interpola.
+    // The extension is unavailable or contradicts real intersection order: interpolate instead.
     const [low, high] = bounds
     anchor = nearestOnStreet(corridor, lerp(low.point, high.point, rankFraction(hits, low.value, high.value, target))).point
-    detail = `Interpolada entre ${low.name} y ${high.name}`
-    confidence = low.gap <= RELIABLE_GAP_METERS && high.gap <= RELIABLE_GAP_METERS ? 'media' : 'baja'
+    detail = `Interpolated between ${low.name} and ${high.name}`
+    confidence = low.gap <= RELIABLE_GAP_METERS && high.gap <= RELIABLE_GAP_METERS ? 'medium' : 'low'
   } else {
     return undefined
   }
 
-  // La placa crece hacia las vías cruzadas de mayor número.
+  // The house number increases toward higher-numbered cross streets.
   const direction = (bounds && unit(subtract(bounds[1].point, bounds[0].point)))
     ?? trendDirection(corridor, hits, anchor, target)
     ?? (family(cross.type) === 'calle' ? { x: 0, y: cross.quadrant === 'sur' ? -1 : 1 } : { x: cross.quadrant === 'este' ? 1 : -1, y: 0 })
@@ -413,7 +413,7 @@ function textSearch(index: GeocoderIndex, query: string, near: Point, limit: num
     .slice(0, limit)
     .map(({ entry }) => {
       const [lon, lat] = toCoordinate(entry.point)
-      return { text: entry.text, detail: entry.detail, lon, lat, kind: entry.kind, confidence: entry.kind === 'street' ? 'baja' : 'alta' }
+      return { text: entry.text, detail: entry.detail, lon, lat, kind: entry.kind, confidence: entry.kind === 'street' ? 'low' : 'high' }
     })
 }
 
@@ -428,7 +428,7 @@ export function search(index: GeocoderIndex, query: string, options: { near?: Co
     for (const registered of index.addresses) {
       if (registered.ref && refKey(registered.ref) === key && registered.number === number) {
         const [lon, lat] = toCoordinate(registered.point)
-        results.push({ text: registered.text, detail: 'Dirección registrada en OSM', lon, lat, kind: 'address', confidence: 'alta' })
+        results.push({ text: registered.text, detail: 'Address registered in OSM', lon, lat, kind: 'address', confidence: 'high' })
       }
     }
     const estimated = geocodeNomenclature(index, address)
@@ -436,7 +436,7 @@ export function search(index: GeocoderIndex, query: string, options: { near?: Co
   } else if (address) {
     for (const street of index.byKey.get(refKey(address.street)) ?? []) {
       const [lon, lat] = toCoordinate(nearestOnStreet(street, near).point)
-      results.push({ text: street.name, detail: 'Vía', lon, lat, kind: 'street', confidence: 'baja' })
+      results.push({ text: street.name, detail: 'Street', lon, lat, kind: 'street', confidence: 'low' })
     }
   }
   const seen = new Set(results.map(result => result.text))
@@ -454,7 +454,7 @@ let indexPromise: Promise<GeocoderIndex> | undefined
 export function loadGeocoder(): Promise<GeocoderIndex> {
   indexPromise ??= fetch(asset('data/bogota-geocoder.json'))
     .then(response => {
-      if (!response.ok) throw new Error('La búsqueda de direcciones no está instalada; selecciona el punto en el mapa.')
+      if (!response.ok) throw new Error('Address search is not installed; select a point on the map.')
       return response.json() as Promise<RawGeocoderIndex>
     })
     .then(buildGeocoderIndex)

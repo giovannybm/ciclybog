@@ -1,16 +1,16 @@
-# Tareas
+# Tasks
 
-- [x] Definir el esquema versionado del índice geográfico (JSON v2: vías con geometría, lugares, direcciones).
-- [x] Extraer `addr:*`, nombres de calles con geometría y lugares etiquetados desde el PBF, sin textos basura ni coordenadas ficticias.
-- [x] Implementar normalización de acentos, abreviaturas y signos.
-- [x] Interpretar nomenclatura bogotana (tipo, número, letra, bis, cuadrante, placa).
-- [x] Ubicar direcciones por cruce, prolongación validada o interpolación entre cruces, y avanzar la placa.
-- [x] Implementar búsqueda por prefijo de palabra y ranking por tipo y distancia al centro del mapa.
-- [x] Crear `public/data/bogota-geocoder.json` desde `pnpm geocoder:generate` (6,4 MB; 1,8 MB gzip).
-- [x] Agregar autocomplete “Origen” y “Destino” con retardo y descarte de respuestas obsoletas.
-- [x] Conectar resultados con el snap y el ruteador Rust/WASM (validación de Bogotá y centrado del mapa).
-- [x] Incluir el índice en el precache de la PWA.
-- [x] Añadir pruebas de normalización, nomenclatura, interpolación, ausencia de resultados y datos reales (`pnpm test`).
-- [ ] Cargar el índice en un Web Worker para no bloquear el hilo principal (hoy ~260 ms de preparación).
-- [ ] Agregar geocodificación inversa básica.
-- [ ] Medir tiempo de carga del índice en móvil.
+- [x] Define the versioned geographic-index schema (JSON v2: roads with geometry, places, addresses).
+- [x] Extract `addr:*`, named streets with geometry, and tagged places from the PBF without junk text or fabricated coordinates.
+- [x] Implement accent, abbreviation, and punctuation normalization.
+- [x] Parse Bogotá street nomenclature (type, number, letter, bis, quadrant, plate).
+- [x] Locate addresses by intersection, validated extension, or interpolation, then advance the plate distance.
+- [x] Implement word-prefix search and ranking by type and distance from the map center.
+- [x] Create `public/data/bogota-geocoder.json` with `pnpm geocoder:generate` (6.4 MB; 1.8 MB gzip).
+- [x] Add **Origin** and **Destination** autocomplete with debounce and stale-response rejection.
+- [x] Connect results to the Rust/WASM router snap (Bogotá validation and map centering).
+- [x] Include the index in the PWA precache.
+- [x] Add normalization, nomenclature, interpolation, no-result, and real-data tests (`pnpm test`).
+- [ ] Load the index in a Web Worker to avoid blocking the main thread (currently ~260 ms preparation).
+- [ ] Add basic reverse geocoding.
+- [ ] Measure index load time on mobile.

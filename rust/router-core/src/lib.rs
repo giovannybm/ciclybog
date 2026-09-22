@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 pub const GRAPH_MAGIC: &[u8; 8] = b"CICLYG02";
-/// Distancia máxima entre el punto seleccionado y la vía sobre la que se proyecta.
+/// Maximum distance between the selected point and the road it snaps to.
 pub const MAX_SNAP_METERS: f64 = 250.0;
 const MAX_PREFERRED_DETOUR_RATIO: f64 = 1.18;
 const MAX_ALTERNATIVE_DISTANCE_RATIO: f64 = 1.4;
@@ -32,8 +32,8 @@ pub struct Node {
     pub coordinate: Coordinate,
 }
 
-/// Arista dirigida. Las dos direcciones de una vía de doble sentido comparten
-/// `geometry`; `reversed` indica si se recorre en sentido inverso al almacenado.
+/// Directed edge. Both directions of a two-way road share `geometry`; `reversed`
+/// indicates whether it is traversed opposite to the stored direction.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Edge {
     pub from: u32,
@@ -50,7 +50,7 @@ pub struct Edge {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TurnRestriction {
-    /// Índice interno del nodo de giro.
+    /// Internal index of the turn node.
     pub via_node: u32,
     pub from_way: i64,
     pub to_way: i64,
@@ -103,12 +103,12 @@ impl Graph {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
         if bytes.len() < GRAPH_MAGIC.len() || &bytes[..GRAPH_MAGIC.len()] != GRAPH_MAGIC {
-            return Err("Formato de grafo inválido o desactualizado; regenera bogota-graph.bin".into());
+            return Err("Invalid or outdated graph format; regenerate bogota-graph.bin".into());
         }
         bincode::deserialize(&bytes[GRAPH_MAGIC.len()..]).map_err(|error| error.to_string())
     }
 
-    /// Geometría de la arista en su sentido de recorrido.
+    /// Edge geometry in its traversal direction.
     pub fn edge_geometry(&self, edge: &Edge) -> Vec<Coordinate> {
         let mut geometry = self.geometries[edge.geometry as usize].clone();
         if edge.reversed {
@@ -134,7 +134,7 @@ impl Graph {
     }
 }
 
-/// Tramo de vía entre dos nodos de decisión, usado por el pipeline y las pruebas.
+/// Road segment between two decision nodes, used by the pipeline and tests.
 pub struct WaySegment<'a> {
     pub from: u32,
     pub to: u32,
@@ -264,20 +264,20 @@ pub fn build_csr(edges: &[Edge], node_count: usize) -> (Vec<u32>, Vec<u32>, Vec<
     )
 }
 
-/// Grafo con los índices que se construyen una sola vez al cargar.
+/// Graph with indexes built once when loaded.
 pub struct PreparedGraph {
     graph: Graph,
     main_component_size: usize,
     grid: HashMap<(i32, i32), Vec<u32>>,
     restrictions: HashMap<(u32, i64), Vec<(i64, bool)>>,
-    /// Rumbo inicial y final de cada arista en su sentido de recorrido.
+    /// Initial and final bearing of each edge in its traversal direction.
     bearings: Vec<(f32, f32)>,
 }
 
 #[derive(Clone, Copy, Debug)]
 struct Snap {
     edge: u32,
-    /// Posición sobre la geometría almacenada: índice de tramo + fracción.
+    /// Position on the stored geometry: segment index plus fraction.
     position: f64,
     point: Coordinate,
     distance: f64,
@@ -292,7 +292,7 @@ struct VirtualEdge {
     bearings: (f32, f32),
 }
 
-/// Nodos y aristas temporales de una consulta. El grafo base no se modifica.
+/// Temporary nodes and edges for a query. The base graph is not modified.
 struct Query {
     origin: u32,
     destination: u32,
@@ -404,18 +404,18 @@ impl PreparedGraph {
 
     pub fn route(&self, request: &RouteRequest) -> Result<Vec<Route>, String> {
         let origin = self.snap(request.origin).ok_or(format!(
-            "No hay una vía apta para bicicleta a menos de {} m del origen",
+            "No bikeable road is within {} m of the origin",
             MAX_SNAP_METERS as u32
         ))?;
         let destination = self.snap(request.destination).ok_or(format!(
-            "No hay una vía apta para bicicleta a menos de {} m del destino",
+            "No bikeable road is within {} m of the destination",
             MAX_SNAP_METERS as u32
         ))?;
         if haversine_distance(origin.point, destination.point) < 1.0 {
-            return Err("El origen y el destino son demasiado cercanos".into());
+            return Err("The origin and destination are too close together".into());
         }
         let query = self.build_query(origin, destination);
-        let no_route = || "No existe una ruta ciclista entre los puntos".to_string();
+        let no_route = || "No bike route exists between these points".to_string();
 
         let preferred = self.search(&query, true, None).ok_or_else(no_route)?;
         let shortest = self.search(&query, false, None).ok_or_else(no_route)?;
@@ -479,7 +479,7 @@ impl PreparedGraph {
         }
     }
 
-    /// Fracción de la distancia de `candidate` recorrida sobre vías de `reference`.
+    /// Fraction of `candidate` distance traveled on `reference` roads.
     fn overlap(&self, query: &Query, reference: &Path, candidate: &Path) -> f64 {
         let shared: HashSet<u32> = self
             .traveled_edges(query, reference)
@@ -493,7 +493,7 @@ impl PreparedGraph {
         shared_distance / candidate.distance.max(f64::EPSILON)
     }
 
-    /// Aristas con longitud real; los enlaces de snap de longitud 0 no cuentan como vía recorrida.
+    /// Edges with real length; zero-length snap links do not count as traveled road.
     fn traveled_edges<'a>(&'a self, query: &'a Query, path: &'a Path) -> impl Iterator<Item = &'a u32> {
         path.edges
             .iter()
@@ -539,7 +539,7 @@ impl PreparedGraph {
         best
     }
 
-    /// La arista indicada y, si existe, su gemela en sentido contrario.
+    /// The given edge and, if present, its twin in the opposite direction.
     fn edge_and_twin(&self, edge_index: u32) -> Vec<u32> {
         let edge = &self.graph.edges[edge_index as usize];
         let mut edges = vec![edge_index];
@@ -697,7 +697,7 @@ impl PreparedGraph {
                     return false;
                 }
             } else if restricted_way == to_way {
-                // `no_u_turn` sobre la misma vía solo prohíbe regresar, no seguir derecho.
+                // `no_u_turn` on the same road only prohibits turning back, not going straight.
                 if from_way != to_way
                     || turn_angle(
                         self.edge_bearings(query, incoming).1,
@@ -711,7 +711,7 @@ impl PreparedGraph {
         has_only
     }
 
-    /// A* sobre estados por arista: el costo de continuar depende de la arista de llegada.
+    /// A* over edge states: continuation cost depends on the incoming edge.
     fn search(&self, query: &Query, weighted: bool, penalties: Option<&[f32]>) -> Option<Path> {
         let total_edges = self.graph.edges.len() + query.edges.len();
         let mut costs = vec![f64::INFINITY; total_edges];
@@ -831,7 +831,7 @@ impl PreparedGraph {
     }
 }
 
-/// Componente fuertemente conexa más grande (Kosaraju iterativo).
+/// Largest strongly connected component (iterative Kosaraju).
 fn largest_strong_component(graph: &Graph) -> Vec<bool> {
     let node_count = graph.nodes.len();
     let mut visited = vec![false; node_count];
@@ -930,7 +930,7 @@ fn point_at(geometry: &[Coordinate], position: f64) -> Coordinate {
     )
 }
 
-/// Subpolilínea entre dos posiciones (índice de tramo + fracción), con `start <= end`.
+/// Sub-polyline between two positions (segment index plus fraction), with `start <= end`.
 fn slice_geometry(geometry: &[Coordinate], start: f64, end: f64) -> Vec<Coordinate> {
     let mut output = vec![point_at(geometry, start)];
     output.extend(
@@ -982,7 +982,7 @@ fn bearing(start: Coordinate, end: Coordinate) -> f32 {
     (end.lat - start.lat).atan2((end.lon - start.lon) * latitude) as f32
 }
 
-/// Ángulo absoluto de giro en grados, entre 0 (recto) y 180 (retorno).
+/// Absolute turn angle in degrees, from 0 (straight) to 180 (U-turn).
 fn turn_angle(incoming: f32, outgoing: f32) -> f64 {
     let mut delta = (outgoing - incoming).abs() as f64;
     if delta > std::f64::consts::PI {

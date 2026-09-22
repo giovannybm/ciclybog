@@ -74,9 +74,9 @@ for (let x = lonToTile(west); x <= lonToTile(east); x += 1) {
   }
 }
 
-// Las tiles pueden contener dos vías que se cruzan sin compartir un vértice.
-// Se usa una cuadrícula espacial para probar únicamente segmentos cercanos y
-// se ignoran puentes/túneles para no crear conexiones físicamente inexistentes.
+// Tiles may contain two roads that cross without sharing a vertex.
+// Use a spatial grid to test only nearby segments and ignore bridges/tunnels
+// so physically nonexistent connections are not created.
 const intersectionCellSize = 0.0005
 const grid = new Map()
 const cuts = rawSegments.map(() => new Set([0, 1]))
@@ -150,5 +150,5 @@ for (let index = 0; index < rawSegments.length; index += 1) {
 }
 
 await writeFile(outputPath, JSON.stringify({ type: 'FeatureCollection', features }))
-console.log(`Generadas ${features.length} aristas desde ${inputPath}; intersecciones procesadas: ${rawSegments.length}`)
+console.log(`Generated ${features.length} edges from ${inputPath}; processed intersections: ${rawSegments.length}`)
 console.log(`Red normalizada guardada en ${outputPath}`)

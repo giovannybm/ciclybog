@@ -1,135 +1,135 @@
 # Ciclybog
 
-PWA instalable para planificar rutas en bicicleta por Bogotá. Ciclybog combina Vue 3, MapLibre y un motor de ruteo propio en Rust/WASM que corre directamente en el dispositivo.
+An installable PWA for planning bike routes through Bogotá. Ciclybog combines Vue 3, MapLibre, and a custom Rust/WASM routing engine that runs directly on the device.
 
-La aplicación permite buscar direcciones con un índice local, elegir puntos desde el mapa o la ubicación del dispositivo, comparar rutas alternativas y guardar recorridos. El cálculo no depende de un backend de ruteo y puede funcionar sin conexión después de instalar los datos locales.
+The app supports local address search, map and device-location point selection, route alternatives, and locally saved routes. Routing does not depend on a backend and can work offline after the local assets have been installed.
 
-## Requisitos
+## Requirements
 
-- Node.js 22 o compatible.
-- pnpm 10 o superior.
-- Rust estable y `wasm-bindgen-cli` para regenerar el motor WASM o los datos.
+- Node.js 22 or compatible.
+- pnpm 10 or newer.
+- Stable Rust and `wasm-bindgen-cli` to regenerate the WASM engine or data assets.
 
-El desarrollo de la interfaz solo necesita Node.js y pnpm; Rust es necesario para ejecutar las pruebas y comandos del pipeline.
+Frontend development only requires Node.js and pnpm. Rust is required for router tests and data-pipeline commands.
 
-## Inicio rápido
+## Quick start
 
-El proyecto usa **pnpm** como único gestor de paquetes (`packageManager` en `package.json`; `npm install` es rechazado por `only-allow`).
+The project uses **pnpm** as its only package manager (`packageManager` in `package.json`; `npm install` is rejected by `only-allow`).
 
 ```sh
-corepack enable        # o instala pnpm >= 10
+corepack enable        # or install pnpm >= 10
 pnpm install
 cp .env.example .env
 pnpm dev
 ```
 
-Abre la URL que muestra Vite, normalmente `http://localhost:5173`.
+Open the URL printed by Vite, normally `http://localhost:5173`.
 
-La aplicación calcula las rutas en el dispositivo con Rust/WASM dentro de un Web Worker. No existe un backend de ruteo.
+The app calculates routes on the device with Rust/WASM inside a Web Worker. There is no routing backend.
 
-### Analítica con Microsoft Clarity
+### Microsoft Clarity analytics
 
-Para activar Clarity, crea un proyecto en Microsoft Clarity y agrega su identificador al entorno:
+To enable Clarity, create a Microsoft Clarity project and add its ID to the environment:
 
 ```sh
-VITE_CLARITY_PROJECT_ID=tu_project_id
+VITE_CLARITY_PROJECT_ID=your_project_id
 ```
 
-La integración es opcional; sin esta variable no se carga Clarity.
+The integration is optional. Clarity is not loaded when this variable is absent, and the app asks for user consent before starting it.
 
-### Variables de entorno
+### Environment variables
 
-Todas las variables son opcionales durante el desarrollo. Los valores por defecto cargan los artefactos locales incluidos en `public/data/`.
+All variables are optional during development. By default, the app loads the local assets included in `public/data/`.
 
-| Variable | Uso |
+| Variable | Purpose |
 | --- | --- |
-| `VITE_CLARITY_PROJECT_ID` | Activa la analítica de Microsoft Clarity después del consentimiento del usuario. |
-| `VITE_MAP_STYLE_URL` | Estilo remoto de MapLibre cuando no se usa PMTiles local. |
-| `VITE_PMTILES_URL` | Ruta al archivo PMTiles local o remoto. |
-| `VITE_ROUTE_GRAPH_URL` | Ruta alternativa al grafo binario de ruteo. |
-| `VITE_SITE_URL` | URL pública usada para canonical, Open Graph y Twitter/X. |
+| `VITE_CLARITY_PROJECT_ID` | Enables Microsoft Clarity after user consent. |
+| `VITE_MAP_STYLE_URL` | Remote MapLibre style when local PMTiles are not used. |
+| `VITE_PMTILES_URL` | Path to a local or remote PMTiles file. |
+| `VITE_ROUTE_GRAPH_URL` | Alternative path to the binary routing graph. |
+| `VITE_SITE_URL` | Public URL used for canonical, Open Graph, and Twitter/X metadata. |
 
-El archivo `.env.example` contiene la plantilla mínima para comenzar.
+`.env.example` contains the starter template.
 
-## Uso
+## Using the app
 
-- Toca el mapa para fijar el origen y luego el destino, busca una dirección o lugar, o usa el botón de ubicación junto a cada campo. El botón de geolocalización del mapa muestra y sigue tu posición. La ubicación requiere HTTPS o `localhost` y permiso del navegador.
-- En móvil (≤ 720 px) el mapa ocupa toda la pantalla: la búsqueda flota arriba y se contrae a un resumen cuando hay ruta, y una hoja inferior muestra estado, rutas y acciones. Desliza o toca la barra de la hoja para ver leyenda, rutas guardadas y privacidad. La ruta se encuadra dejando libres la búsqueda y la hoja.
-- El motor devuelve la ruta principal y hasta dos alternativas. La lista muestra la distancia y el porcentaje en cicloruta de cada una; la seleccionada es la que se guarda.
-- **Instalar app** aparece cuando el navegador lo permite (Chrome, Edge, Android). En iPhone/iPad se muestran instrucciones para *Compartir → Agregar a inicio*.
+- Tap the map to set the origin and then the destination, search for an address or place, or use the location button beside either field. Browser location requires HTTPS or `localhost` and the user's permission.
+- On mobile (≤ 720 px), the map fills the screen. Search floats at the top and collapses to a summary after a route is calculated; a bottom sheet contains status, routes, and actions. Swipe or tap the sheet handle to view the legend, saved routes, and privacy settings.
+- The engine returns a primary route and up to two alternatives. Each route displays distance and cycleway coverage; the selected route is the one that gets saved.
+- **Install app** appears when the browser supports installation (Chrome, Edge, Android). On iPhone/iPad, the app shows instructions for *Share → Add to Home Screen*.
 
-## Grafo de ruteo
+## Routing graph
 
-El grafo de Bogotá se genera desde `data/bogota.osm.pbf` y queda en `public/data/bogota-graph.bin`. PMTiles solo se usa para el mapa.
+The Bogotá graph is generated from `data/bogota.osm.pbf` and stored at `public/data/bogota-graph.bin`. PMTiles is used only for map rendering.
 
 ```sh
-pnpm map:download-osm   # descarga el extracto de BBBike
-pnpm router:osm-data    # genera el .bin y la capa de ciclorutas
-pnpm router:wasm        # compila el motor a WASM
-pnpm router:inspect     # tamaño, componentes y tiempos de ruta de ejemplo
-pnpm router:test        # pruebas del motor y del pipeline
+pnpm map:download-osm   # download the BBBike extract
+pnpm router:osm-data    # generate the graph and cycleway layer
+pnpm router:wasm        # compile the routing engine to WASM
+pnpm router:inspect     # inspect size, components, and sample route timings
+pnpm router:test        # run router and pipeline tests
 ```
 
-Con otro PBF compatible con OSM:
+With another compatible PBF:
 
 ```sh
 OSM_PBF_SOURCE_URL=https://.../bogota.osm.pbf pnpm map:download-osm
 ```
 
-El PBF por defecto proviene del extracto de Bogotá de [BBBike](https://download.bbbike.org/osm/bbbike/Bogota/). Los datos de OpenStreetMap están sujetos a ODbL y deben conservar la atribución.
+The default PBF comes from the [BBBike Bogotá extract](https://download.bbbike.org/osm/bbbike/Bogota/). OpenStreetMap data is subject to the ODbL; keep the required attribution when publishing the app.
 
-### Pipeline
+### Pipeline rules
 
-- **Clasificación de ciclorutas:** una vía es cicloruta si es `highway=cycleway`, si `cycleway`/`cycleway:both|left|right` es `track`, `lane` u `opposite_*`, o si es un sendero con acceso ciclista explícito. `cycleway:*=no`, `separate` y `shared_lane` no cuentan.
-- **Acceso:** `bicycle=yes|designated|permissive|official` prevalece sobre `access=no` y `vehicle=no`. `bicycle=dismount` entra con costo ×3.
-- **Sentido:** se respetan `oneway` y las glorietas, y se habilita el contraflujo ciclista con `oneway:bicycle=no` o `cycleway*=opposite*`.
-- **Restricciones de giro:** se ignoran las que tienen `except=bicycle` y las específicas de otros vehículos (`restriction:motorcar`, …). Se usa `restriction:bicycle` si existe.
-- **Contracción:** el grafo solo tiene nodos en intersecciones, extremos y nodos de restricción. Las dos direcciones de una vía comparten geometría y los textos van en una tabla. Resultado actual: 107.831 nodos, 246.985 aristas, 23 MB.
+- **Cycleway classification:** a road is a cycleway when `highway=cycleway`, when `cycleway`/`cycleway:both|left|right` is `track`, `lane`, or `opposite_*`, or when a path has explicit bicycle access. `cycleway:*=no`, `separate`, and `shared_lane` do not count.
+- **Access:** `bicycle=yes|designated|permissive|official` takes precedence over `access=no` and `vehicle=no`. `bicycle=dismount` is included with a ×3 cost.
+- **Direction:** `oneway` and roundabouts are respected. Bicycle contraflow is enabled by `oneway:bicycle=no` or `cycleway*=opposite*`.
+- **Turn restrictions:** restrictions with `except=bicycle` and restrictions specific to other vehicles (`restriction:motorcar`, …) are ignored. `restriction:bicycle` is used when available.
+- **Contraction:** the graph keeps nodes at intersections, endpoints, and restriction nodes. Both directions of a road share geometry and strings are stored in a table. Current result: 107,831 nodes, 246,985 edges, 23 MB.
 
-### Motor
+### Routing engine
 
-- **Índices:** al cargar se calculan la componente fuertemente conexa principal, una grilla espacial y un índice de restricciones.
-- **Snap:** se proyecta el punto sobre la vía más cercana a menos de 250 m y se divide la arista y su gemela en un overlay temporal, sin clonar el grafo.
-- **Búsqueda:** A* sobre estados por arista, de modo que las penalizaciones y restricciones de giro son exactas. La ruta preferida (ponderada por infraestructura) no supera el 18% de desvío respecto a la más corta.
-- **Alternativas:** se obtienen penalizando las vías ya usadas. Se aceptan si miden ≤ 1,4× la principal y comparten ≤ 80% de su distancia.
-- **Rendimiento:** en release nativo, carga e índices tardan ~75 ms y una ruta de 6 km tarda ~3 ms (una de 20 km, ~16 ms).
+- **Indexes:** the largest strongly connected component, a spatial grid, and a turn-restriction index are built at load time.
+- **Snapping:** the point is projected onto the nearest road within 250 m. The edge and its twin are split in a temporary overlay without cloning the graph.
+- **Search:** A* runs over edge states, so turn penalties and restrictions remain exact. The preferred route stays within 18% of the shortest route.
+- **Alternatives:** alternatives penalize roads already used by the primary route. They are accepted when they are ≤ 1.4× the primary distance and share ≤ 80% of its distance.
+- **Performance:** native release builds load and index the graph in ~75 ms; a 6 km route takes ~3 ms and a 20 km route ~16 ms.
 
-La clave del grafo en IndexedDB se deriva del hash SHA-1 del `.bin` durante el build, así que un grafo regenerado reemplaza automáticamente al anterior.
+The IndexedDB graph key is derived from the `.bin` SHA-1 hash during the build, so regenerating the graph automatically replaces the previous version.
 
-Para inspeccionar en QGIS las aristas exactas del motor:
+To inspect the engine's exact edges in QGIS:
 
 ```sh
 pnpm router:export-geojson   # → data/bogota-graph.geojson
 ```
 
-El costo de ruteo pondera la infraestructura; la distancia mostrada es la física.
+Routing cost weights infrastructure; displayed distance remains physical distance.
 
-## Búsqueda de direcciones
+## Address search
 
-Los campos **Origen** y **Destino** buscan en un índice local (`public/data/bogota-geocoder.json`) generado desde el mismo PBF:
+The **Origin** and **Destination** fields search a local index (`public/data/bogota-geocoder.json`) generated from the same PBF:
 
 ```sh
-pnpm geocoder:generate   # vías con geometría, lugares y direcciones de OSM
-pnpm test                # pruebas del geocodificador (incluye datos reales)
+pnpm geocoder:generate   # roads with geometry, places, and OSM addresses
+pnpm test                # geocoder tests, including real data
 ```
 
-OSM tiene pocas direcciones con número en Bogotá, así que las direcciones con nomenclatura (`Cra. 10 172b 50`, `Calle 26 Sur # 13-20`, `KR 10 No. 172 B - 50`) se calculan así:
+OSM contains relatively few numbered addresses in Bogotá, so street-number addresses (`Cra. 10 172b 50`, `Calle 26 Sur # 13-20`, `KR 10 No. 172 B - 50`) are resolved using:
 
-- **Registrada en OSM:** si la dirección existe, se usa directamente.
-- **Cruce:** si la vía cruzada toca la principal, se usa el punto de cruce.
-- **Prolongación:** si la cruzada no llega, se prolonga hasta 600 m, siempre que no contradiga el orden de los cruces reales vecinos.
-- **Interpolación:** en otro caso se interpola entre las cruzadas de número inmediatamente menor y mayor.
-- **Placa:** desde ese punto se avanza la cantidad de metros de la placa hacia las cruzadas de mayor número.
+- **Registered OSM address:** used directly when available.
+- **Intersection:** the crossing point is used when the cross street touches the main street.
+- **Extension:** the cross street is extended by up to 600 m when it does not reach the main street, unless that contradicts neighboring intersections.
+- **Interpolation:** otherwise, the point is interpolated between the nearest lower and higher numbered cross streets.
+- **House number:** the plate distance is advanced toward higher-numbered cross streets.
 
-Cada sugerencia indica cómo se obtuvo, por ejemplo *Interpolada entre Calle 172 y Calle 173*. Es una estimación: la precisión depende de cómo estén nombradas las vías en OSM.
+Each suggestion reports how it was resolved, for example *Interpolated between Calle 172 and Calle 173*. It is an estimate; accuracy depends on how roads are named in OSM.
 
 ## PWA
 
-- `pnpm pwa:assets` regenera los íconos (64, 192, 512, maskable y apple-touch) desde `public/favicon.svg`.
-- El manifest declara `id`, `scope`, `lang`, `display: standalone` e íconos; el service worker (Workbox, `autoUpdate`) precachea el shell, el WASM, el grafo, las capas GeoJSON y el PMTiles.
-- La instalación y la geolocalización requieren un origen seguro: HTTPS en producción o `localhost` en desarrollo. Para probar en un teléfono dentro de la red local, sirve la app por HTTPS (por ejemplo con un túnel).
+- `pnpm pwa:assets` regenerates the 64, 192, 512, maskable, and Apple Touch icons from `public/favicon.svg`.
+- The manifest declares `id`, `scope`, `lang`, `display: standalone`, and icons. Workbox (`autoUpdate`) precaches the shell, WASM, graph, GeoJSON layers, geocoder index, and PMTiles.
+- Installation and geolocation require a secure origin: HTTPS in production or `localhost` during development. To test on a phone over a local network, serve the app over HTTPS, for example through a tunnel.
 
-## Build y despliegue
+## Build and deployment
 
 ```sh
 pnpm typecheck
@@ -138,47 +138,47 @@ pnpm build
 pnpm preview
 ```
 
-El proyecto está configurado para Netlify con `pnpm build` y `dist/` como directorio publicado. Define `VITE_SITE_URL` en producción si el dominio no está disponible automáticamente en la variable `URL` de Netlify.
+The project is configured for Netlify with `pnpm build` and `dist/` as the publish directory. Set `VITE_SITE_URL` in production when the domain is not available automatically through Netlify's `URL` variable.
 
-También existe un build para insertar la aplicación bajo `/demos/ciclybog/`:
+An embedded build is available under `/demos/ciclybog/`:
 
 ```sh
 pnpm build:embed
 ```
 
-Ese comando genera `dist-embed/`, no registra service worker y desactiva la analítica.
+This command generates `dist-embed/`, does not register a service worker, and disables analytics.
 
-## Vista previa en redes
+## Social previews
 
-`index.html` incluye metaetiquetas Open Graph y Twitter (`summary_large_image`) para que los enlaces muestren título, descripción e imagen en WhatsApp, Facebook, LinkedIn, Slack y X.
+`index.html` includes Open Graph and Twitter (`summary_large_image`) metadata so shared links show a preview in WhatsApp, Facebook, LinkedIn, Slack, and X.
 
-- La imagen es `public/og-image.png` (1200×630). Se regenera con `pnpm og:image` desde `scripts/generate-og-image.mjs`.
-- Las redes exigen URLs absolutas: en el build, `%SITE_URL%` se reemplaza por `VITE_SITE_URL` o, en Netlify, por la variable `URL` del sitio. Si ninguna existe, el build lo advierte.
-- Para revisar cómo se ve un enlace publicado usa el [Sharing Debugger de Facebook](https://developers.facebook.com/tools/debug/) o [opengraph.xyz](https://www.opengraph.xyz/). WhatsApp y otras redes guardan en caché la vista previa.
+- The image is `public/og-image.png` (1200×630), regenerated with `pnpm og:image` from `scripts/generate-og-image.mjs`.
+- Social networks require absolute URLs. During the build, `%SITE_URL%` is replaced by `VITE_SITE_URL` or Netlify's `URL` variable. If neither exists, the build prints a warning and uses the default site URL.
+- To inspect a published link, use [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) or [opengraph.xyz](https://www.opengraph.xyz/). WhatsApp and other networks cache previews.
 
-## Mapa offline con PMTiles
+## Offline map with PMTiles
 
-Coloca el extracto PMTiles de Bogotá en `public/data/bogota.pmtiles` y activa `VITE_PMTILES_URL=/data/bogota.pmtiles`. La aplicación registra el protocolo `pmtiles://` y genera el estilo vectorial Protomaps localmente.
+Place the Bogotá PMTiles extract at `public/data/bogota.pmtiles` and set `VITE_PMTILES_URL=/data/bogota.pmtiles`. The app registers the `pmtiles://` protocol and generates a local Protomaps vector style.
 
-- Zonas verdes: `#ddffc6`.
-- Agua: `#c6d9ff`.
-- Capa `public/data/bogota-cycleways.geojson` (generada desde el mismo PBF que el grafo): `#3437eb`.
-- Tramos en cicloruta de una ruta calculada: `#17601a`.
-- Una máscara blanca cubre lo que queda fuera de Bogotá.
+- Green areas: `#ddffc6`.
+- Water: `#c6d9ff`.
+- `public/data/bogota-cycleways.geojson` (generated from the same PBF as the graph): `#3437eb`.
+- Cycleway segments in a calculated route: `#17601a`.
+- A white mask covers the area outside Bogotá.
 
-Sin ese archivo se usa el estilo demo de `VITE_MAP_STYLE_URL`, que no es una experiencia offline completa.
+Without this file, the app uses the demo style from `VITE_MAP_STYLE_URL`, which is not a complete offline experience.
 
-Para extraer Bogotá desde un PMTiles global instala [go-pmtiles](https://github.com/protomaps/go-pmtiles/releases) y ejecuta:
+To extract Bogotá from a global PMTiles file, install [go-pmtiles](https://github.com/protomaps/go-pmtiles/releases) and run:
 
 ```sh
 PMTILES_SOURCE_URL=https://build.protomaps.com/YYYYMMDD.pmtiles pnpm map:download
 ```
 
-`MAX_ZOOM` controla el nivel máximo (por defecto `15`).
+`MAX_ZOOM` controls the maximum zoom level (15 by default).
 
-El límite administrativo (`public/data/bogota-boundary.geojson` y `bogota-mask.geojson`) se actualiza con `pnpm map:boundary:update`.
+The administrative boundary (`public/data/bogota-boundary.geojson` and `bogota-mask.geojson`) is updated with `pnpm map:boundary:update`.
 
-## Especificación
+## Specifications
 
-- Especificaciones vigentes: [`openspec/specs/`](openspec/specs/).
-- Cambios archivados: [`openspec/changes/archive/`](openspec/changes/archive/).
+- Current specifications: [`openspec/specs/`](openspec/specs/).
+- Archived changes: [`openspec/changes/archive/`](openspec/changes/archive/).

@@ -2,9 +2,9 @@ import { mkdir, writeFile } from 'node:fs/promises'
 
 const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&polygon_geojson=1&limit=1&q=Bogot%C3%A1%2C%20Colombia'
 const response = await fetch(url, { headers: { 'user-agent': 'ciclybog/0.1 boundary updater' } })
-if (!response.ok) throw new Error(`No se pudo descargar el límite de Bogotá: ${response.status}`)
+if (!response.ok) throw new Error(`Could not download Bogotá's boundary: ${response.status}`)
 const [place] = await response.json()
-if (!place?.geojson?.coordinates) throw new Error('La respuesta no contiene geometría GeoJSON')
+if (!place?.geojson?.coordinates) throw new Error('The response does not contain GeoJSON geometry')
 
 const geometry = { type: place.geojson.type, coordinates: place.geojson.coordinates }
 const world = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]]
@@ -17,4 +17,4 @@ const feature = { type: 'Feature', properties: { source: 'OpenStreetMap relation
 await mkdir('public/data', { recursive: true })
 await writeFile('public/data/bogota-boundary.geojson', JSON.stringify(feature))
 await writeFile('public/data/bogota-mask.geojson', JSON.stringify(mask))
-console.log(`Límite Bogotá guardado desde relación OSM ${place.osm_id}`)
+console.log(`Bogotá boundary saved from OSM relation ${place.osm_id}`)

@@ -1,30 +1,30 @@
-# Capacidad: mapa local de Bogotá
+# Capability: local Bogotá map
 
-## Requisitos
+## Requirements
 
-### Requisito: fuente PMTiles
-La aplicación DEBE poder cargar el mapa vectorial local desde `VITE_PMTILES_URL` mediante el protocolo `pmtiles://` de MapLibre.
+### Requirement: PMTiles source
+The application MUST load the local vector map from `VITE_PMTILES_URL` through MapLibre's `pmtiles://` protocol.
 
-### Requisito: capa ciclista OSM
-La aplicación DEBE mostrar por defecto la capa `public/data/bogota-cycleways.geojson`, generada desde el mismo extracto OSM PBF que alimenta el grafo, con color `#3437eb` y visibilidad desde zoom 9.
+### Requirement: OSM cycling layer
+The application MUST show `public/data/bogota-cycleways.geojson` by default. It is generated from the same OSM PBF extract that feeds the graph, uses color `#3437eb`, and is visible from zoom 9.
 
-### Requisito: máscara geográfica
-La aplicación DEBE mostrar el mapa coloreado únicamente dentro del polígono administrativo local de Bogotá (`bogota-boundary.geojson`) y cubrir con blanco la información exterior mediante `bogota-mask.geojson`.
+### Requirement: geographic mask
+The application MUST render map content only inside Bogotá's local administrative polygon (`bogota-boundary.geojson`) and cover exterior content in white through `bogota-mask.geojson`.
 
-#### Escenario: exterior del área
-- DADO que el viewport incluye el margen alrededor del área de datos
-- CUANDO se renderiza el mapa
-- ENTONCES el exterior del límite configurado aparece blanco y sin etiquetas ni estilos de las tiles.
+#### Scenario: outside the area
+- GIVEN the viewport includes a margin around the data area
+- WHEN the map renders
+- THEN the area outside the configured boundary appears white, without tile labels or styles.
 
-### Requisito: estilo de infraestructura
-La aplicación DEBE diferenciar visualmente los segmentos de ruta según `infrastructure`.
+### Requirement: infrastructure styling
+The application MUST visually distinguish route segments by `infrastructure`.
 
-#### Escenario: colores de mapa y ruta
-- DADO un mapa PMTiles cargado y una ruta calculada
-- CUANDO se renderizan sus capas
-- ENTONCES las zonas verdes usan `#ddffc6`, el agua usa `#c6d9ff`, las ciclovías del mapa base usan `#3437eb`, las ciclovías de una ruta calculada usan `#17601a` y las vías convencionales conservan un color distinto.
+#### Scenario: map and route colors
+- GIVEN a loaded PMTiles map and a calculated route
+- WHEN their layers render
+- THEN green areas use `#ddffc6`, water uses `#c6d9ff`, base-map cycleways use `#3437eb`, calculated-route cycleways use `#17601a`, and conventional roads keep a distinct color.
 
-### Requisito: navegación acotada
-La aplicación DEBE permitir un margen de paneo alrededor del área de Bogotá sin permitir que el usuario navegue indefinidamente fuera de la zona configurada.
+### Requirement: bounded navigation
+The application MUST allow a panning margin around Bogotá without allowing indefinite navigation outside the configured area.
 
-> El paneo usa una ventana amplia rectangular, pero la máscara y la selección usan el polígono administrativo local descargado desde OpenStreetMap.
+> Panning uses a wide rectangular window, while masking and selection use the local administrative polygon downloaded from OpenStreetMap.

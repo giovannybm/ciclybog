@@ -9,7 +9,7 @@ let router: WasmRouter | undefined
 self.onmessage = async ({ data }: MessageEvent<Message>) => {
   try {
     if (data.type === 'load') { router = await loadWasmRouter(data.bytes, data.baseUrl); self.postMessage({ id: data.id, ok: true, routes: [] }); return }
-    if (!router) throw new Error('El motor Rust todavía no está cargado')
+    if (!router) throw new Error('The Rust engine has not loaded yet')
     const routes = router.route(data.origin[0], data.origin[1], data.destination[0], data.destination[1], data.alternatives).map(toCalculatedRoute)
     self.postMessage({ id: data.id, ok: true, routes })
   } catch (error) {
@@ -33,8 +33,8 @@ function toCalculatedRoute(route: RawRoute): CalculatedRoute {
 }
 
 async function loadWasmRouter(bytes: ArrayBuffer, baseUrl = '/'): Promise<WasmRouter> {
-  // La base la manda el hilo principal: resolver contra self.location.origin
-  // ignoraría el subpath y rompería la app al servirla fuera de la raíz.
+  // The main thread provides the base: resolving against self.location.origin
+  // would ignore the subpath and break the app when served outside the root.
   const base = new URL(baseUrl, self.location.origin)
   const moduleUrl = new URL('wasm/ciclybog_router_wasm.js', base).href
   const module = await import(/* @vite-ignore */ moduleUrl) as { default: (input?: unknown) => Promise<void>; Router: new (bytes: Uint8Array) => WasmRouter }

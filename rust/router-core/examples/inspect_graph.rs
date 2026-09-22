@@ -3,9 +3,9 @@ use std::{env, fs, time::Instant};
 
 fn main() {
     let path = env::args().nth(1).expect("Uso: inspect_graph <graph.bin>");
-    let bytes = fs::read(&path).expect("No se pudo leer el grafo");
+    let bytes = fs::read(&path).expect("Could not read the graph");
     let started = Instant::now();
-    let prepared = PreparedGraph::from_bytes(&bytes).expect("Grafo inválido");
+    let prepared = PreparedGraph::from_bytes(&bytes).expect("Invalid graph");
     let graph = prepared.graph();
     println!(
         "version={} size={:.1}MB load+index={:?} nodes={} edges={} geometries={} restrictions={} main_component={}",
@@ -38,7 +38,7 @@ fn main() {
                 routes
                     .iter()
                     .map(|route| format!(
-                        "{:.0} m ({:.0}% cicloruta, {} segmentos)",
+                        "{:.0} m ({:.0}% cycleway, {} segments)",
                         route.distance_meters,
                         100.0 * route.cycleway_meters / route.distance_meters,
                         route.segments.len()

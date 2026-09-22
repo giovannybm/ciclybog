@@ -5,8 +5,8 @@ import './lib/install'
 import App from './App.vue'
 import './style.css'
 
-// En el build embebido no se registra service worker: cachearía 24+ MB en el
-// origen del contenedor y seguiría sirviendo una versión vieja tras recompilar.
+// Embedded builds do not register a service worker: it would cache 24+ MB on the
+// host origin and keep serving an old version after rebuilds.
 if (!import.meta.env.VITE_EMBED) registerSW({ immediate: true })
 
 const clarityProjectId = import.meta.env.VITE_CLARITY_PROJECT_ID

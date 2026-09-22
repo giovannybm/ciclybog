@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
-// Se registra al importar el módulo para no perder `beforeinstallprompt`,
-// que puede dispararse antes de montar la aplicación.
+// Register on import so we do not miss `beforeinstallprompt`, which may fire
+// before the app is mounted.
 export const installPrompt = ref<BeforeInstallPromptEvent | undefined>()
 export const isStandalone = ref(window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true)
 export const needsIosInstructions = /iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone.value

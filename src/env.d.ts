@@ -9,7 +9,7 @@ interface ImportMetaEnv {
   readonly VITE_PMTILES_URL?: string
   readonly VITE_CLARITY_PROJECT_ID?: string
   readonly VITE_SITE_URL?: string
-  /** '1' cuando la app se compila para ir embebida bajo un subpath: sin PWA ni analítica. */
+  /** '1' when the app is built for embedding under a subpath: no PWA or analytics. */
   readonly VITE_EMBED?: string
 }
 

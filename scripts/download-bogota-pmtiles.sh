@@ -14,13 +14,13 @@ MAX_ZOOM="${MAX_ZOOM:-15}"
 BOGOTA_BBOX="${BOGOTA_BBOX:--74.25,4.45,-73.95,4.90}"
 
 if [[ -z "$SOURCE_URL" ]]; then
-  echo "Falta la URL del archivo PMTiles origen."
+  echo "The source PMTiles URL is required."
   echo "Uso: PMTILES_SOURCE_URL=https://.../archivo.pmtiles $0"
   exit 2
 fi
 
 if ! command -v pmtiles >/dev/null 2>&1; then
-  echo "No se encontró el CLI 'pmtiles'. Instálalo desde: https://github.com/protomaps/go-pmtiles/releases"
+  echo "The 'pmtiles' CLI was not found. Install it from: https://github.com/protomaps/go-pmtiles/releases"
   exit 1
 fi
 
@@ -29,8 +29,8 @@ temporary_output="$(mktemp "${TMPDIR:-/tmp}/bogota.XXXXXX.pmtiles")"
 cleanup() { rm -f "$temporary_output"; }
 trap cleanup EXIT
 
-echo "Extrayendo Bogotá desde: $SOURCE_URL"
-echo "Bounding box: $BOGOTA_BBOX | zoom máximo: $MAX_ZOOM"
+echo "Extracting Bogotá from: $SOURCE_URL"
+echo "Bounding box: $BOGOTA_BBOX | maximum zoom: $MAX_ZOOM"
 
 pmtiles extract "$SOURCE_URL" "$temporary_output" \
   --bbox="$BOGOTA_BBOX" \
@@ -39,4 +39,4 @@ pmtiles extract "$SOURCE_URL" "$temporary_output" \
 
 mv "$temporary_output" "$OUTPUT_PATH"
 trap - EXIT
-echo "PMTiles guardado en: $OUTPUT_PATH"
+echo "PMTiles saved to: $OUTPUT_PATH"

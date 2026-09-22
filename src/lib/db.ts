@@ -47,7 +47,7 @@ export async function getGraph(): Promise<ArrayBuffer | undefined> {
 export async function saveGraph(bytes: ArrayBuffer): Promise<void> {
   const db = await openDatabase()
   return new Promise((resolve, reject) => {
-    // Solo se conserva la versión vigente del grafo.
+    // Keep only the current graph version.
     const transaction = db.transaction(GRAPH_STORE, 'readwrite')
     const store = transaction.objectStore(GRAPH_STORE)
     store.clear()

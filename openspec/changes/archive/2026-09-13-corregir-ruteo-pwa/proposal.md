@@ -1,34 +1,34 @@
-# Propuesta: corregir el ruteo, migrar a pnpm y completar la PWA
+# Proposal: fix routing, migrate to pnpm, and complete the PWA
 
-## Contexto
+## Context
 
-La revisión del motor (13 de septiembre de 2026) contra el grafo real de Bogotá encontró errores de datos y de algoritmo que degradan la calidad de las rutas:
+The September 13, 2026 review against Bogotá's real graph found data and algorithm errors that degraded route quality:
 
-- 1.443 vías con solo `cycleway:*=no` se clasificaban como ciclorruta.
-- 874 restricciones de giro con `except=bicycle` (y las `restriction:<vehículo>` de carros) se aplicaban a bicicletas.
-- 186 vías con contraflujo ciclista (`oneway:bicycle=no`, `cycleway=opposite*`) quedaban de un solo sentido.
-- `access=no` descartaba vías con `bicycle=yes`; `bicycle=dismount` no se trataba.
-- La condición de parada del A* bidireccional sumaba las prioridades de ambas colas y podía cortar la búsqueda antes del óptimo.
-- Las penalizaciones y restricciones de giro se evaluaban sobre estados por nodo, perdiendo llegadas válidas.
-- Las alternativas bloqueaban toda la ruta principal y casi nunca aparecían; la UI tampoco permitía elegirlas.
-- El snap no tenía distancia máxima; la componente principal era no dirigida.
-- Cada consulta recalculaba componentes, recorría todo el grafo para el snap, reconstruía adyacencias y clonaba el grafo.
-- El `.bin` repetía textos y geometrías y tenía un nodo por cada nodo OSM (63 MB).
-- La clave de IndexedDB del grafo era fija y `vue-tsc -b` emitía `.js` junto a las fuentes.
+- 1,443 roads with only `cycleway:*=no` were classified as cycleways.
+- 874 turn restrictions with `except=bicycle` (and car-specific `restriction:<vehicle>` values) were applied to bicycles.
+- 186 bicycle-contraflow roads (`oneway:bicycle=no`, `cycleway=opposite*`) remained one-way.
+- `access=no` discarded roads with `bicycle=yes`; `bicycle=dismount` was not handled.
+- Bidirectional A* stopped on the sum of both queue priorities and could terminate before the optimum.
+- Turn penalties and restrictions were evaluated on node states, losing valid arrivals.
+- Alternatives blocked the entire primary route and rarely appeared; the UI could not select them.
+- Snapping had no maximum distance; the main component was undirected.
+- Every query recomputed components, scanned the whole graph for snapping, rebuilt adjacency lists, and cloned the graph.
+- The `.bin` repeated strings and geometries and had one node per OSM node (63 MB).
+- The IndexedDB graph key was fixed and `vue-tsc -b` emitted `.js` files next to sources.
 
-Además se requiere usar exclusivamente pnpm, que la PWA sea instalable y que el usuario pueda usar su ubicación.
+The project also needed to use pnpm exclusively, provide an installable PWA, and let users use their location.
 
-## Solución propuesta
+## Proposed solution
 
-1. **Pipeline:** clasificación ciclista corregida, restricciones filtradas para bicicleta, contraflujo, `access`/`bicycle` con precedencia correcta, `dismount` con costo alto, y grafo contraído (se divide cada vía solo en intersecciones, extremos y nodos de restricción) con tablas compartidas de textos y geometrías.
-2. **Motor:** índice preparado al cargar (componente fuertemente conexa principal, grilla espacial, restricciones indexadas), A* unidireccional sobre estados por arista (correcto con giros), snap a ≤ 250 m que divide la arista y su gemela sin clonar el grafo, y alternativas por penalización con control de solapamiento.
-3. **Frontend:** selector de alternativas con porcentaje en ciclorruta, clave del grafo derivada de su contenido, eliminación de artefactos `.js` y `noEmit`.
-4. **Herramientas:** pnpm como único gestor (`packageManager`, lockfile, scripts y documentación).
-5. **PWA:** íconos 192/512/maskable/apple-touch, manifest completo, botón “Instalar app”.
-6. **Ubicación:** control de geolocalización en el mapa y botones para usar la ubicación como origen o destino.
+1. **Pipeline:** correct cycleway classification, bicycle-aware restriction filtering, contraflow, correct `access`/`bicycle` precedence, high-cost `dismount`, and a contracted graph split only at intersections, endpoints, and restriction nodes with shared string and geometry tables.
+2. **Engine:** load-time indexes (largest strongly connected component, spatial grid, indexed restrictions), edge-state unidirectional A* with correct turn handling, ≤ 250 m snapping that splits an edge and its twin without cloning, and overlap-controlled penalty alternatives.
+3. **Frontend:** alternative selector with cycleway percentage, content-derived graph key, removal of generated `.js` artifacts, and `noEmit`.
+4. **Tooling:** pnpm as the only package manager (`packageManager`, lockfile, scripts, and documentation).
+5. **PWA:** 192/512/maskable/Apple Touch icons, complete manifest, and **Install app** button.
+6. **Location:** map geolocation control and buttons to use location as origin or destination.
 
-## Fuera de alcance
+## Out of scope
 
-- Navegación giro a giro, geocodificación y sincronización.
-- Restricciones de giro con vía intermedia (`via` de tipo way).
-- Inclusión de vías `trunk`/`motorway`.
+- Turn-by-turn navigation, geocoding, and synchronization.
+- Turn restrictions with a way-based intermediate `via` member.
+- Including `trunk`/`motorway` roads.

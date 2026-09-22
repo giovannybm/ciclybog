@@ -4,22 +4,22 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// La clave de IndexedDB cambia cuando cambia el contenido del grafo publicado.
+// The IndexedDB key changes when the published graph content changes.
 const graphPath = 'public/data/bogota-graph.bin'
 const graphHash = existsSync(graphPath) ? createHash('sha1').update(readFileSync(graphPath)).digest('hex').slice(0, 16) : 'missing'
 
-// Las metaetiquetas Open Graph exigen URLs absolutas: VITE_SITE_URL o, en Netlify, la URL del sitio.
-// Sin un valor, `%SITE_URL%/` quedaba en `href="/"` y Vite intentaba resolver ese
-// href del <link rel="canonical"> como un asset local: leía el directorio raíz y
-// el build moría con EISDIR. El fallback mantiene las URLs absolutas y válidas.
+// Open Graph metadata requires absolute URLs: VITE_SITE_URL or Netlify's site URL.
+// Without a value, `%SITE_URL%/` became `href="/"` and Vite tried to resolve the
+// canonical link as a local asset: it read the root directory and the build failed
+// with EISDIR. The fallback keeps URLs absolute and valid.
 const configuredSiteUrl = (process.env.VITE_SITE_URL || process.env.URL || '').replace(/\/$/, '')
 const siteUrl = configuredSiteUrl || 'https://ciclybog.netlify.app'
 
-// Permite servir la app bajo un subpath, p.ej. embebida dentro de otra página.
-// Sin la variable la base sigue siendo '/', así que el despliegue no cambia.
+// Allows serving the app under a subpath, for example embedded in another page.
+// Without the variable, the base remains '/', so root deployments do not change.
 const base = process.env.VITE_BASE_PATH || '/'
-// El build embebido no registra service worker: cachearía 24+ MB en el origen
-// del contenedor y serviría versiones viejas tras recompilar.
+// Embedded builds do not register a service worker: it would cache 24+ MB on the
+// host origin and serve stale versions after rebuilds.
 const embed = process.env.VITE_EMBED === '1'
 
 export default defineConfig(({ command }) => ({
@@ -27,8 +27,8 @@ export default defineConfig(({ command }) => ({
   server: {
     allowedHosts: ['.ngrok-free.app']
   },
-  // outDir se decide aquí y no con --outDir en la CLI: vite-plugin-pwa lo lee en
-  // configResolved y el flag de línea de comandos lo dejaba sin resolver.
+  // Decide outDir here rather than with the CLI --outDir flag: vite-plugin-pwa
+  // reads it in configResolved and the CLI flag left it unresolved.
   build: {
     outDir: embed ? 'dist-embed' : 'dist'
   },
@@ -39,24 +39,24 @@ export default defineConfig(({ command }) => ({
       transformIndexHtml: {
         order: 'pre',
         handler: html => {
-          if (command === 'build' && !configuredSiteUrl) console.warn(`[ciclybog] VITE_SITE_URL no definida; se usa ${siteUrl} para la vista previa en redes.`)
+          if (command === 'build' && !configuredSiteUrl) console.warn(`[ciclybog] VITE_SITE_URL is not defined; using ${siteUrl} for social previews.`)
           return html.replaceAll('%SITE_URL%', siteUrl)
         }
       }
     },
     vue(),
-    // Se mantiene aunque `embed` lo desactive: el plugin es quien provee el
-    // módulo virtual `virtual:pwa-register` que importa src/main.ts. Excluirlo
-    // del array dejaría ese import sin resolver.
+    // Keep the plugin even when `embed` disables it: the plugin provides the
+    // virtual `virtual:pwa-register` module imported by src/main.ts. Removing it
+    // from the array would leave that import unresolved.
     VitePWA({
       disable: embed,
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
         id: base,
-        name: 'Ciclybog — rutas en bicicleta',
+        name: 'Ciclybog — bike routes',
         short_name: 'Ciclybog',
-        description: 'Planificador de rutas ciclistas offline para Bogotá',
+        description: 'Offline bike route planner for Bogotá',
         lang: 'es-CO',
         dir: 'ltr',
         theme_color: '#102a43',
@@ -75,7 +75,7 @@ export default defineConfig(({ command }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,bin,wasm,pmtiles,geojson}', 'data/bogota-geocoder.json'],
-        // La imagen de vista previa solo la usan las redes; no hace falta offline.
+        // The preview image is only used by social networks; it is not needed offline.
         globIgnores: ['og-image.png'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         navigateFallback: `${base}index.html`,

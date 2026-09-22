@@ -1,4 +1,4 @@
-# Diseño: geocodificador local
+# Design: local geocoder
 
 ## Pipeline
 
@@ -9,24 +9,24 @@ data/bogota.osm.pbf
         └── bogota-geocoder.bin
 ```
 
-El pipeline Rust leerá nodos, vías y etiquetas OSM. Para cada entidad útil generará un registro con texto normalizado, texto visible, coordenadas, tipo y prioridad. Se incluirán principalmente `addr:*`, `place`, `amenity`, `shop`, `tourism`, `leisure`, `name` y `highway` con nombre.
+The Rust pipeline reads OSM nodes, roads, and tags. For each useful entity it generates a record with normalized text, display text, coordinates, type, and priority. It primarily includes `addr:*`, `place`, `amenity`, `shop`, `tourism`, `leisure`, `name`, and named `highway` features.
 
-## Índice
+## Index
 
-La primera versión puede usar un índice binario de términos a IDs y una lista compacta de registros. La búsqueda en el Web Worker combinará:
+The first version may use a binary term-to-ID index and a compact record list. Search in the Web Worker combines:
 
-1. normalización Unicode y abreviaturas;
-2. coincidencia de prefijo;
-3. coincidencia por tokens;
-4. distancia de Levenshtein limitada para errores pequeños;
-5. distancia geográfica al centro visible del mapa.
+1. Unicode and abbreviation normalization;
+2. prefix matching;
+3. token matching;
+4. bounded Levenshtein distance for small errors;
+5. geographic distance from the visible map center.
 
-El índice se cacheará en IndexedDB con una clave que incluya la versión del PBF. El contenido debe poder regenerarse con un comando reproducible.
+The index is cached in IndexedDB with a key that includes the PBF version. It must be reproducible with a single command.
 
-## Integración con la interfaz
+## UI integration
 
-Los campos “Desde” y “Hasta” tendrán autocomplete local. Al elegir un resultado, la interfaz actualizará el marcador y conservará la selección manual en el mapa. La coordenada se entregará al ruteador, que hará snap a la arista navegable más cercana.
+The **From** and **To** fields provide local autocomplete. Selecting a result updates the marker while keeping manual map selection available. The coordinate is passed to the router, which snaps it to the nearest navigable edge.
 
-## Integración con el PWA
+## PWA integration
 
-`bogota-geocoder.bin` se incluirá en el precache cuando su tamaño sea aceptable. Si el usuario no lo tiene cacheado, la aplicación mostrará estado de instalación y no bloqueará el mapa ni la selección manual.
+`bogota-geocoder.bin` is included in the precache when its size is acceptable. If it is not cached, the application reports its installation status without blocking the map or manual selection.

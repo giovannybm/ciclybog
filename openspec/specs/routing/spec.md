@@ -1,139 +1,139 @@
-# Capacidad: ruteo ciclista local
+# Capability: local cycling routing
 
-## Requisitos
+## Requirements
 
-### Requisito: cargar un grafo local
-La aplicación DEBE cargar un archivo de grafo Rust/WASM configurable antes de habilitar el ruteo, persistirlo en IndexedDB y mostrar un estado accionable si el archivo falta o falla. El grafo de Bogotá DEBE generarse directamente desde un extracto OSM PBF; PMTiles se reserva para visualización.
+### Requirement: load a local graph
+The application MUST load a configurable Rust/WASM graph before enabling routing, persist it in IndexedDB, and show an actionable state when the file is missing or fails. The Bogotá graph MUST be generated directly from an OSM PBF extract; PMTiles is reserved for visualization.
 
-#### Escenario: grafo disponible
-- DADO que el mapa está cargado y el grafo responde correctamente
-- CUANDO se inicializa el Web Worker Rust/WASM
-- ENTONCES el usuario puede seleccionar origen y destino para calcular una ruta.
+#### Scenario: graph available
+- GIVEN the map is loaded and the graph responds correctly
+- WHEN the Rust/WASM Web Worker initializes
+- THEN the user can select an origin and destination to calculate a route.
 
-#### Escenario: grafo ausente
-- DADO que la URL del grafo no responde
-- CUANDO finaliza la inicialización
-- ENTONCES la aplicación informa que debe instalarse el grafo y mantiene el mapa navegable.
+#### Scenario: graph missing
+- GIVEN the graph URL does not respond
+- WHEN initialization finishes
+- THEN the application reports that the graph must be installed and keeps the map usable.
 
-### Requisito: invalidación del grafo en caché
-La clave del grafo en IndexedDB DEBE derivarse del contenido del `.bin` publicado, y las versiones anteriores DEBEN eliminarse al guardar una nueva.
+### Requirement: cached graph invalidation
+The IndexedDB graph key MUST derive from the published `.bin` content, and older versions MUST be removed when a new one is saved.
 
-### Requisito: calcular en el cliente
-La aplicación DEBE ejecutar una búsqueda A* de costo mínimo ponderado sobre estados por arista en un Web Worker mediante WebAssembly y NO DEBE requerir un endpoint de ruteo. La ruta devuelta DEBE ser óptima para el costo definido, incluidas penalizaciones y restricciones de giro.
+### Requirement: client-side calculation
+The application MUST run a weighted minimum-cost A* search over edge states in a Web Worker through WebAssembly and MUST NOT require a routing endpoint. The returned route MUST be optimal for the defined cost, including penalties and turn restrictions.
 
-#### Escenario: solicitud al worker
-- DADO que el usuario selecciona origen y destino
-- CUANDO la aplicación envía la solicitud al worker
-- ENTONCES debe transferir coordenadas planas serializables y recibir segmentos GeoJSON clasificados.
+#### Scenario: worker request
+- GIVEN the user selects an origin and destination
+- WHEN the application sends the request to the worker
+- THEN it transfers plain serializable coordinates and receives classified GeoJSON segments.
 
-#### Escenario: optimalidad
-- DADO un grafo con penalizaciones de giro
-- CUANDO se calcula una ruta
-- ENTONCES su costo coincide con el de una búsqueda exhaustiva sobre estados por arista.
+#### Scenario: optimality
+- GIVEN a graph with turn penalties
+- WHEN a route is calculated
+- THEN its cost matches an exhaustive search over edge states.
 
-#### Escenario: error del motor
-- DADO que Rust no encuentra ruta, el grafo es inválido o falla WASM
-- CUANDO el worker informa la excepción
-- ENTONCES la interfaz debe mostrar el mensaje específico devuelto por el motor y no un error genérico.
+#### Scenario: engine error
+- GIVEN Rust cannot find a route, the graph is invalid, or WASM fails
+- WHEN the worker reports the exception
+- THEN the interface shows the specific message returned by the engine rather than a generic error.
 
-### Requisito: limitar Bogotá
-La aplicación DEBE impedir selección fuera del límite geográfico configurado para Bogotá D.C. y limitar el paneo a una ventana con margen alrededor del área de datos.
+### Requirement: constrain Bogotá
+The application MUST prevent selection outside the configured Bogotá D.C. boundary and limit panning to a window with a margin around the data area.
 
-#### Escenario: punto fuera del área
-- DADO que el usuario pulsa fuera del sobre configurado
-- CUANDO se procesa el clic
-- ENTONCES la aplicación no debe crear origen ni destino y debe informar que el punto está fuera de Bogotá.
+#### Scenario: point outside the area
+- GIVEN the user clicks outside the configured boundary
+- WHEN the click is processed
+- THEN the application does not create an origin or destination and reports that the point is outside Bogotá.
 
-### Requisito: ubicación del usuario
-La aplicación DEBE permitir usar la ubicación actual del dispositivo como origen o destino, validando que esté dentro de Bogotá y mostrando errores de permiso, disponibilidad o tiempo de espera.
+### Requirement: user location
+The application MUST allow the device's current location to be used as an origin or destination, validate that it is inside Bogotá, and show permission, availability, and timeout errors.
 
-#### Escenario: ubicación como origen
-- DADO que el usuario concede el permiso de ubicación y está en Bogotá
-- CUANDO pulsa “Mi ubicación como origen”
-- ENTONCES el origen se ubica en su posición y el mapa se centra en ella; si ya hay destino, se calcula la ruta.
+#### Scenario: location as origin
+- GIVEN the user grants location permission and is in Bogotá
+- WHEN they press **Use my location as origin**
+- THEN the origin is placed at their position and the map centers there; if a destination already exists, the route is calculated.
 
-#### Escenario: permiso denegado
-- DADO que el usuario rechaza el permiso
-- CUANDO pulsa el botón de ubicación
-- ENTONCES la aplicación explica que debe habilitar la ubicación y mantiene la selección manual.
+#### Scenario: permission denied
+- GIVEN the user rejects permission
+- WHEN they press the location button
+- THEN the application explains that location must be enabled and keeps manual selection available.
 
-### Requisito: clasificar segmentos
-El resultado DEBE devolver segmentos con una clasificación `cycleway`, `conventional` o `unknown` para que el mapa los pinte con estilos distintos. Los segmentos consecutivos con la misma infraestructura, nombre y acceso DEBEN fusionarse, y cada ruta DEBE informar sus metros en cicloruta.
+### Requirement: classify segments
+The result MUST return segments classified as `cycleway`, `conventional`, or `unknown` so the map can use distinct styles. Consecutive segments with the same infrastructure, name, and access MUST be merged, and every route MUST report its cycleway meters.
 
-### Requisito: preferir infraestructura ciclista
-El motor DEBE ponderar el costo de cada arista según su infraestructura y tipo de vía, y la distancia reportada DEBE seguir siendo la física.
+### Requirement: prefer cycling infrastructure
+The engine MUST weight each edge by infrastructure and road type, while reported distance MUST remain physical distance.
 
-- Una vía solo DEBE clasificarse como `cycleway` si es `highway=cycleway`, si `cycleway`, `cycleway:both`, `cycleway:left` o `cycleway:right` valen `track`, `lane`, `opposite_track` u `opposite_lane`, o si es un sendero o vía peatonal con acceso ciclista explícito.
-- Las vías peatonales sin acceso ciclista explícito NO DEBEN formar parte del grafo, y los senderos compartidos DEBEN costar más que una ciclovía segregada.
-- `bicycle=yes|designated|permissive|official|dismount` DEBE prevalecer sobre `access=no` y `vehicle=no`, y `bicycle=dismount` DEBE tener un costo alto.
-- `oneway:bicycle=no` y `cycleway*=opposite*` DEBEN habilitar el contraflujo ciclista.
-- La ruta preferida NO DEBE superar el 18% de desvío respecto a la más corta; si lo supera, el motor DEBE devolver la ruta corta.
+- A road MUST be classified as `cycleway` only when it is `highway=cycleway`, when `cycleway`, `cycleway:both`, `cycleway:left`, or `cycleway:right` is `track`, `lane`, `opposite_track`, or `opposite_lane`, or when it is a path or pedestrian road with explicit bicycle access.
+- Pedestrian roads without explicit bicycle access MUST NOT enter the graph, and shared paths MUST cost more than a separated cycleway.
+- `bicycle=yes|designated|permissive|official|dismount` MUST take precedence over `access=no` and `vehicle=no`, and `bicycle=dismount` MUST have a high cost.
+- `oneway:bicycle=no` and `cycleway*=opposite*` MUST enable bicycle contraflow.
+- The preferred route MUST NOT exceed 18% detour from the shortest route; if it does, the engine MUST return the shortest route.
 
-### Requisito: rutas alternativas
-El motor DEBE intentar devolver alternativas que no superen 1,4 veces la distancia de la ruta principal ni compartan más del 80% de su distancia con una ruta ya aceptada. La interfaz DEBE permitir elegir entre ellas y mostrar distancia y porcentaje en cicloruta.
+### Requirement: alternative routes
+The engine MUST attempt to return alternatives no more than 1.4 times the primary route distance and sharing no more than 80% of its distance with an accepted route. The interface MUST allow choosing among them and show distance and cycleway percentage.
 
-#### Escenario: selección de alternativa
-- DADO que el motor devuelve dos rutas
-- CUANDO el usuario elige la segunda
-- ENTONCES el mapa la pinta y “Guardar” persiste esa ruta marcada como alternativa.
+#### Scenario: select an alternative
+- GIVEN the engine returns two routes
+- WHEN the user chooses the second
+- THEN the map displays it and **Save** persists it marked as an alternative.
 
-### Requisito: evitar componentes aislados
-El motor DEBE calcular una única vez, al cargar el grafo, la componente fuertemente conexa más grande y ajustar origen y destino solo a aristas cuyos dos extremos pertenezcan a ella.
+### Requirement: avoid isolated components
+The engine MUST calculate the largest strongly connected component once when loading the graph and snap origin and destination only to edges whose endpoints both belong to it.
 
-#### Escenario: trampa de sentido único
-- DADO un punto cercano a una vía de la que no se puede salir respetando los sentidos
-- CUANDO se hace snap
-- ENTONCES el motor elige la vía navegable más cercana dentro de la componente principal.
+#### Scenario: one-way trap
+- GIVEN a point near a road that cannot be exited while respecting directions
+- WHEN snapping occurs
+- THEN the engine chooses the nearest navigable road inside the main component.
 
-### Requisito: snap sobre aristas
-El motor DEBE proyectar origen y destino sobre la arista navegable más cercana dentro de 250 m, usando un índice espacial, y dividir temporalmente esa arista y su gemela inversa sin modificar ni clonar el grafo base.
+### Requirement: snap to edges
+The engine MUST project the origin and destination onto the nearest navigable edge within 250 m using a spatial index, and temporarily split that edge and its reverse twin without modifying or cloning the base graph.
 
-#### Escenario: clic fuera de un nodo OSM
-- DADO que el usuario selecciona un punto cercano al centro de una vía
-- CUANDO se calcula la ruta
-- ENTONCES el motor inicia o termina en la posición proyectada sobre la vía.
+#### Scenario: click away from an OSM node
+- GIVEN the user selects a point near the middle of a road
+- WHEN a route is calculated
+- THEN the engine starts or ends at the projected position on the road.
 
-#### Escenario: clic lejos de la red
-- DADO un punto a más de 250 m de cualquier vía navegable
-- CUANDO se calcula la ruta
-- ENTONCES el motor devuelve un error que indica que no hay vía apta cerca del origen o destino.
+#### Scenario: click far from the network
+- GIVEN a point is more than 250 m from any navigable road
+- WHEN a route is calculated
+- THEN the engine returns an error stating that no suitable road is near the origin or destination.
 
-#### Escenario: vía de doble sentido
-- DADO un punto sobre una vía de doble sentido
-- CUANDO la ruta debe salir hacia cualquiera de los dos extremos
-- ENTONCES el motor sale directamente en ese sentido sin recorrer la cuadra y regresar.
+#### Scenario: two-way road
+- GIVEN a point on a two-way road
+- WHEN the route must leave toward either endpoint
+- THEN the engine leaves directly in that direction without traversing and returning along the block.
 
-#### Escenario: origen y destino en la misma vía
-- DADO origen y destino sobre la misma arista en el sentido permitido
-- CUANDO se calcula la ruta
-- ENTONCES la ruta es el tramo directo entre ambas proyecciones.
+#### Scenario: origin and destination on one road
+- GIVEN origin and destination lie on the same edge in the permitted direction
+- WHEN a route is calculated
+- THEN the route is the direct segment between both projections.
 
-### Requisito: formato preparado para optimización
-El archivo binario DEBE conservar una versión explícita, índices CSR de entrada y salida, restricciones de giro, tablas compartidas de textos y geometrías, y nodos solo en puntos de decisión, sin depender de PMTiles.
+### Requirement: optimization-ready format
+The binary file MUST retain an explicit version, incoming and outgoing CSR indexes, turn restrictions, shared string and geometry tables, and nodes only at decision points, without depending on PMTiles.
 
-### Requisito: penalización de giros
-El motor DEBE aplicar un costo adicional según el ángulo entre el último tramo de la arista entrante y el primero de la saliente, sin modificar la distancia física reportada.
+### Requirement: turn penalties
+The engine MUST apply an additional cost based on the angle between the last segment of the incoming edge and the first segment of the outgoing edge without changing reported physical distance.
 
-### Requisito: restricciones de giro OSM
-El motor DEBE impedir transiciones `no_*` y permitir únicamente la vía indicada por `only_*`; un `no_u_turn` sobre la misma vía solo DEBE impedir el retorno. El pipeline DEBE ignorar restricciones con `except` que incluya `bicycle`, usar `restriction:bicycle` cuando exista e ignorar las restricciones específicas de otros vehículos o condicionales.
+### Requirement: OSM turn restrictions
+The engine MUST prevent `no_*` transitions and allow only the road specified by `only_*`; a `no_u_turn` on the same road MUST only prevent returning. The pipeline MUST ignore restrictions whose `except` includes `bicycle`, use `restriction:bicycle` when present, and ignore restrictions specific to other vehicles or conditionals.
 
-#### Escenario: llegada alternativa a un nodo
-- DADO que la llegada más barata a un nodo tiene prohibido el giro necesario
-- CUANDO existe otra llegada al mismo nodo que sí lo permite
-- ENTONCES el motor encuentra la ruta usando esa otra llegada.
+#### Scenario: alternate arrival at a node
+- GIVEN the cheapest arrival at a node forbids the required turn
+- WHEN another arrival at the same node allows it
+- THEN the engine finds the route using that other arrival.
 
-### Requisito: persistir rutas
-La aplicación DEBE guardar cada GeoJSON LineString creado en almacenamiento local y recuperarlo al abrirla de nuevo.
+### Requirement: persist routes
+The application MUST save every generated GeoJSON LineString in local storage and restore it when opened again.
 
-#### Escenario: nueva ruta
-- DADO que Rust/WASM devuelve una ruta calculada
-- CUANDO el usuario la guarda
-- ENTONCES se guarda con un identificador y timestamps y se muestra en “Mis rutas”.
+#### Scenario: new route
+- GIVEN Rust/WASM returns a calculated route
+- WHEN the user saves it
+- THEN it is stored with an ID and timestamps and appears under **My saved routes**.
 
-### Requisito: inspeccionar el grafo
-El proyecto DEBE proporcionar un exportador reproducible que convierta `bogota-graph.bin` a GeoJSON con una Feature por arista y conserve sus atributos topológicos y de ruteo.
+### Requirement: inspect the graph
+The project MUST provide a reproducible exporter that converts `bogota-graph.bin` to GeoJSON with one feature per edge and preserves its topological and routing attributes.
 
-#### Escenario: exportación para QGIS
-- DADO un grafo binario generado desde el PBF
-- CUANDO se ejecuta `pnpm router:export-geojson`
-- ENTONCES se genera `data/bogota-graph.geojson` con `from`, `to`, `distance_meters`, `routing_cost`, `infrastructure`, `road_name`, `osm_way_id` y `bicycle_access`.
+#### Scenario: QGIS export
+- GIVEN a binary graph generated from the PBF
+- WHEN `pnpm router:export-geojson` runs
+- THEN `data/bogota-graph.geojson` is generated with `from`, `to`, `distance_meters`, `routing_cost`, `infrastructure`, `road_name`, `osm_way_id`, and `bicycle_access`.

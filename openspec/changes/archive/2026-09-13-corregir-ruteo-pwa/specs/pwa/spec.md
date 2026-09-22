@@ -1,16 +1,16 @@
-# Delta: PWA offline
+# Delta: offline PWA
 
-## MODIFICADO
+## MODIFIED
 
-### Requisito: instalabilidad
-La aplicación DEBE publicar un manifest con `id`, `name`, `short_name`, `start_url`, `scope`, `display: standalone`, `lang`, colores e íconos PNG de 192 y 512 px (incluido uno `maskable`), un `apple-touch-icon` y registrar un service worker con manejador `fetch`. Cuando el navegador lo permita, la interfaz DEBE ofrecer un botón “Instalar app”; en iOS DEBE indicar cómo agregarla a la pantalla de inicio.
+### Requirement: installability
+The application MUST publish a manifest with `id`, `name`, `short_name`, `start_url`, `scope`, `display: standalone`, `lang`, colors, 192 and 512 px PNG icons (including one `maskable` icon), an Apple Touch icon, and a service worker with a `fetch` handler. When the browser allows it, the interface MUST offer an **Install app** button; on iOS it MUST explain how to add the app to the Home Screen.
 
-#### Escenario: instalación en Chrome/Android
-- DADO que la app se sirve por HTTPS o localhost y el service worker está activo
-- CUANDO el navegador emite `beforeinstallprompt`
-- ENTONCES aparece “Instalar app” y al pulsarlo se muestra el diálogo nativo; tras instalar, el botón desaparece.
+#### Scenario: Chrome/Android installation
+- GIVEN the app is served over HTTPS or localhost and the service worker is active
+- WHEN the browser emits `beforeinstallprompt`
+- THEN **Install app** appears and opens the native dialog; after installation, the button disappears.
 
-## AGREGADO
+## ADDED
 
-### Requisito: gestor de paquetes
-El proyecto DEBE usar pnpm como único gestor de paquetes: `packageManager` declarado, `pnpm-lock.yaml` como único lockfile y scripts y documentación con `pnpm`.
+### Requirement: package manager
+The project MUST use pnpm as its only package manager: declare `packageManager`, keep `pnpm-lock.yaml` as the only lockfile, and use `pnpm` in scripts and documentation.

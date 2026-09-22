@@ -4,8 +4,8 @@ use serde::Deserialize;
 use std::{collections::HashMap, env, fs, io::BufReader, process};
 
 const GRAPH_VERSION: &str = "osm-pbf-v4-contracted";
-// El GeoJSON de muestra puede cortar la misma vía con pequeñas diferencias
-// numéricas. Un umbral de ~22 m conecta esos extremos sin exigir coincidencia exacta.
+// The sample GeoJSON may split the same road with small numeric differences.
+// A ~22 m threshold connects those endpoints without requiring exact matches.
 const SNAP_TOLERANCE_DEGREES: f64 = 0.0002;
 const SNAP_CELL_SCALE: f64 = 10_000.0;
 const DISMOUNT_FACTOR: f32 = 3.0;
@@ -41,7 +41,7 @@ struct Properties {
 fn main() {
     let args: Vec<String> = env::args().collect();
     if !(3..=4).contains(&args.len()) {
-        eprintln!("Uso: ciclybog-data-pipeline <network.geojson|bogota.osm.pbf> <output.bin> [cycleways.geojson]");
+        eprintln!("Usage: ciclybog-data-pipeline <network.geojson|bogota.osm.pbf> <output.bin> [cycleways.geojson]");
         process::exit(2);
     }
     if args[1].ends_with(".pbf") {
@@ -53,8 +53,8 @@ fn main() {
 
 fn build_from_geojson(input_path: &str, output_path: &str) {
     let input: FeatureCollection =
-        serde_json::from_str(&fs::read_to_string(input_path).expect("No se pudo leer el GeoJSON"))
-            .expect("GeoJSON inválido");
+        serde_json::from_str(&fs::read_to_string(input_path).expect("Could not read GeoJSON"))
+            .expect("Invalid GeoJSON");
     let mut builder = GraphBuilder::new();
     let mut nodes = Vec::<Coordinate>::new();
     let mut cells = HashMap::<(i64, i64), Vec<u32>>::new();
@@ -112,8 +112,8 @@ fn build_from_geojson(input_path: &str, output_path: &str) {
         });
     }
     let graph = builder.build("geojson-sample-v4");
-    fs::write(output_path, graph.to_bytes().expect("No se pudo serializar el grafo"))
-        .expect("No se pudo escribir el grafo");
+    fs::write(output_path, graph.to_bytes().expect("Could not serialize graph"))
+        .expect("Could not write graph");
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -135,12 +135,12 @@ struct AcceptedWay {
     id: i64,
     name: Option<String>,
     profile: WayProfile,
-    /// Tramos continuos de nodos con coordenadas conocidas.
+    /// Continuous sequences of nodes with known coordinates.
     pieces: Vec<Vec<i64>>,
 }
 
 fn build_from_osm_pbf(input_path: &str, output_path: &str, cycleways_output: Option<&str>) {
-    let file = fs::File::open(input_path).expect("No se pudo abrir el OSM PBF");
+    let file = fs::File::open(input_path).expect("Could not open OSM PBF");
     let mut reader = OsmPbfReader::new(BufReader::new(file));
     let mut coordinates = HashMap::new();
     let mut raw_ways = Vec::new();
@@ -148,7 +148,7 @@ fn build_from_osm_pbf(input_path: &str, output_path: &str, cycleways_output: Opt
     let mut ignored_restrictions = 0usize;
 
     for object in reader.iter() {
-        match object.expect("OSM PBF inválido") {
+        match object.expect("Invalid OSM PBF") {
             OsmObj::Node(node) => {
                 coordinates.insert(
                     node.id.0,
@@ -234,7 +234,8 @@ fn build_from_osm_pbf(input_path: &str, output_path: &str, cycleways_output: Opt
         })
         .collect();
 
-    // Un nodo es de decisión si lo usan varias vías, es extremo de tramo o es vía de una restricción.
+    // A node is a decision point if multiple roads use it, it is a segment endpoint,
+    // or it belongs to a turn restriction.
     for way in &ways {
         for piece in &way.pieces {
             for node in piece {
@@ -302,10 +303,10 @@ fn build_from_osm_pbf(input_path: &str, output_path: &str, cycleways_output: Opt
         builder.add_turn_restriction(restriction);
     }
     let graph = builder.build(GRAPH_VERSION);
-    let bytes = graph.to_bytes().expect("No se pudo serializar el grafo OSM");
-    fs::write(output_path, &bytes).expect("No se pudo escribir el grafo OSM");
+    let bytes = graph.to_bytes().expect("Could not serialize OSM graph");
+    fs::write(output_path, &bytes).expect("Could not write OSM graph");
     eprintln!(
-        "Grafo OSM {GRAPH_VERSION}: {} vías, {} nodos, {} aristas, {} geometrías, {} restricciones ({} ignoradas para bicicleta o sin nodo vía), {} nodos sin coordenadas, {:.1} MB",
+        "OSM graph {GRAPH_VERSION}: {} roads, {} nodes, {} edges, {} geometries, {} restrictions ({} ignored for bicycles or missing a via node), {} nodes without coordinates, {:.1} MB",
         ways.len(),
         graph.nodes.len(),
         graph.edges.len(),
@@ -319,10 +320,10 @@ fn build_from_osm_pbf(input_path: &str, output_path: &str, cycleways_output: Opt
         let collection = serde_json::json!({ "type": "FeatureCollection", "features": cycleway_features });
         fs::write(
             cycleways_output,
-            serde_json::to_vec(&collection).expect("No se pudo serializar la capa ciclista"),
+            serde_json::to_vec(&collection).expect("Could not serialize cycleway layer"),
         )
-        .expect("No se pudo escribir la capa ciclista");
-        eprintln!("Capa ciclista OSM guardada en: {cycleways_output}");
+        .expect("Could not write cycleway layer");
+        eprintln!("OSM cycleway layer saved to: {cycleways_output}");
     }
 }
 
@@ -330,7 +331,7 @@ fn tag<'a>(tags: &'a Tags, key: &str) -> Option<&'a str> {
     tags.get(key).map(|value| value.as_str())
 }
 
-/// Devuelve `Some(only)` si la relación de restricción aplica a bicicletas.
+/// Returns `Some(only)` if the restriction relation applies to bicycles.
 fn bicycle_restriction(tags: &Tags) -> Option<bool> {
     if tag(tags, "type") != Some("restriction") {
         return None;
@@ -382,7 +383,7 @@ fn classify_way(tags: &Tags) -> Option<WayProfile> {
     }
     let dismount = bicycle == Some("dismount");
     let bicycle_accessible = matches!(bicycle, Some("yes" | "designated" | "permissive" | "official"));
-    // Un permiso ciclista explícito prevalece sobre restricciones generales.
+    // An explicit bicycle permission takes precedence over general restrictions.
     let generally_closed = ["access", "vehicle"]
         .iter()
         .any(|key| matches!(tag(tags, key), Some("no" | "private")));

@@ -1,52 +1,52 @@
-# Datos del grafo
+# Routing graph data
 
-`public/data/bogota-graph.bin` es un artefacto generado desde un extracto OSM PBF de Bogotá con `pnpm router:osm-data`. PMTiles se usa únicamente para visualización.
+`public/data/bogota-graph.bin` is generated from a Bogotá OSM PBF extract with `pnpm router:osm-data`. PMTiles is used only for visualization.
 
-## Formato (v3, magic `CICLYG02`, versión `osm-pbf-v4-contracted`)
+## Format (v3, magic `CICLYG02`, version `osm-pbf-v4-contracted`)
 
-- **Nodos:** solo puntos de decisión: intersecciones entre vías aceptadas, extremos de vía y nodos vía de restricciones de giro.
-- **Aristas:** dirigidas, con `distance_meters` y `routing_cost` (`f32`), referencia a una geometría compartida (`geometry` + `reversed`), infraestructura, índices a la tabla `strings` para nombre y acceso, y `osm_way_id`.
-- **Índices y restricciones:** adyacencias CSR de entrada y salida, y restricciones de giro con `via_node` como índice interno.
+- **Nodes:** only decision points: intersections between accepted roads, road endpoints, and nodes involved in turn restrictions.
+- **Edges:** directed, with `distance_meters` and `routing_cost` (`f32`), a reference to shared geometry (`geometry` + `reversed`), infrastructure, indexes into the `strings` table for names and access, and `osm_way_id`.
+- **Indexes and restrictions:** incoming and outgoing CSR adjacency lists, plus turn restrictions using `via_node` as an internal index.
 
-El mismo comando genera `public/data/bogota-cycleways.geojson`, que alimenta las líneas azules del mapa, así la capa y el grafo usan la misma versión de OSM.
+The same command generates `public/data/bogota-cycleways.geojson`, which feeds the map's blue lines so the cycleway layer and graph use the same OSM version.
 
-## Reglas de clasificación
+## Classification rules
 
 - **`cycleway`:**
   - `highway=cycleway`.
-  - `cycleway`, `cycleway:both`, `cycleway:left` o `cycleway:right` con `track`, `lane`, `opposite_track` u `opposite_lane`.
-  - `path`/`track`/`footway`/`pedestrian` con `bicycle=yes|designated|permissive|official`.
-- **No son cicloruta:** `cycleway:*=no`, `separate` (la cicloruta está mapeada como vía aparte), `shared_lane` y claves de detalle como `cycleway:left:width`.
-- **Excluidas:** `footway`/`pedestrian` sin acceso ciclista explícito; `bicycle=no|private`; `access` o `vehicle` `no|private` sin permiso ciclista explícito.
-- **Desmonte:** `bicycle=dismount` es transitable con factor 3.0.
-- **Contraflujo:** `oneway:bicycle=no` o `cycleway*=opposite*` hacen la vía de doble sentido para bicicleta.
-- **Restricciones:** se descartan las que tienen `except` con `bicycle`, las solo específicas de otros vehículos y las de vía intermedia tipo way.
+  - `cycleway`, `cycleway:both`, `cycleway:left`, or `cycleway:right` with `track`, `lane`, `opposite_track`, or `opposite_lane`.
+  - `path`/`track`/`footway`/`pedestrian` with `bicycle=yes|designated|permissive|official`.
+- **Not a cycleway:** `cycleway:*=no`, `separate` (the cycleway is mapped as a separate road), `shared_lane`, and detail keys such as `cycleway:left:width`.
+- **Excluded:** `footway`/`pedestrian` without explicit bicycle access; `bicycle=no|private`; `access` or `vehicle` `no|private` without explicit bicycle permission.
+- **Dismount:** `bicycle=dismount` is routable with a factor of 3.0.
+- **Contraflow:** `oneway:bicycle=no` or `cycleway*=opposite*` makes the road two-way for bicycles.
+- **Restrictions:** relations with `except` containing `bicycle`, restrictions specific to other vehicles, and way-based intermediate restrictions are discarded.
 
-### Factores de costo
+### Cost factors
 
-| Vía | Factor |
-| --- | --- |
+| Road | Factor |
+| --- | ---: |
 | `cycleway` | 1.00 |
-| `path`/`track` ciclista | 1.08 |
-| Calles locales | 1.05 |
+| Bicycle `path`/`track` | 1.08 |
+| Local streets | 1.05 |
 | `tertiary` | 1.15 |
-| `footway` ciclista | 1.18 |
-| `track` compartido | 1.22 |
+| Bicycle `footway` | 1.18 |
+| Shared `track` | 1.22 |
 | `secondary` | 1.28 |
-| `path` compartido | 1.30 |
+| Shared `path` | 1.30 |
 | `primary` | 1.42 |
 | `dismount` | 3.00 |
 
-## Resultado de la última generación (13 de septiembre de 2026)
+## Latest generation result (September 13, 2026)
 
-- 73.479 vías aceptadas.
-- 107.831 nodos (104.563 en la componente fuertemente conexa principal).
-- 246.985 aristas, de las cuales 13.911 son cicloruta.
-- 142.474 geometrías y 2.038 restricciones aplicadas.
-- 23,0 MB.
+- 73,479 accepted roads.
+- 107,831 nodes (104,563 in the largest strongly connected component).
+- 246,985 edges, including 13,911 cycleway edges.
+- 142,474 geometries and 2,038 applied restrictions.
+- 23.0 MB.
 
-El extracto reproducible por defecto es `https://download.bbbike.org/osm/bbbike/Bogota/Bogota.osm.pbf`, actualizado por el proveedor el 5 de septiembre de 2026. Los datos de OpenStreetMap se distribuyen bajo ODbL; conserva la atribución de OSM/BBBike al publicar la aplicación.
+The default reproducible extract is `https://download.bbbike.org/osm/bbbike/Bogota/Bogota.osm.pbf`, updated by the provider on September 5, 2026. OpenStreetMap data is distributed under the ODbL; preserve OSM/BBBike attribution when publishing the app.
 
-Para inspeccionar en QGIS las aristas exactas del grafo: `pnpm router:export-geojson` y abre `data/bogota-graph.geojson`. Sus atributos son `from`, `to`, `distance_meters`, `routing_cost`, `infrastructure`, `road_name`, `osm_way_id` y `bicycle_access`.
+To inspect the graph's exact edges in QGIS, run `pnpm router:export-geojson` and open `data/bogota-graph.geojson`. Its attributes are `from`, `to`, `distance_meters`, `routing_cost`, `infrastructure`, `road_name`, `osm_way_id`, and `bicycle_access`.
 
-El archivo PMTiles y el PBF deben tener cobertura y fecha compatibles. El fixture de muestra (`pnpm router:sample-data`) solo sirve para validar la aplicación localmente.
+The PMTiles file and PBF must have compatible coverage and dates. The sample fixture (`pnpm router:sample-data`) is only for local validation.

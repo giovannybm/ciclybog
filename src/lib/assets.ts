@@ -1,24 +1,24 @@
 /**
- * Resuelve un recurso de `public/` contra la base de despliegue.
+ * Resolves a `public/` asset against the deployment base.
  *
- * Con la base por defecto (`/`) el resultado es idéntico a la ruta absoluta que
- * había antes, así que el despliegue en la raíz no cambia. Bajo un subpath
- * (`/demos/ciclybog/`, al embeber la app en otra página) las rutas se reescriben
+ * With the default base (`/`), the result is identical to the absolute path used
+ * before, so root deployments are unchanged. Under a subpath
+ * (`/demos/ciclybog/`, when embedding the app in another page), paths are rewritten
  * solas.
  *
- * Todas las rutas absolutas del proyecto pasan por aquí: concentrar el riesgo en
- * una función lo hace auditable de un vistazo.
+ * All absolute project paths go through this function: keeping the risk in one
+ * place makes it easy to audit.
  */
 export function asset(path: string): string {
   return `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
 }
 
 /**
- * Igual que `asset`, pero respetando una variable de entorno si está definida.
+ * Like `asset`, but honoring an environment variable when one is defined.
  *
  * Ojo: `.env` trae valores absolutos (`/data/bogota-graph.bin`) heredados de
- * cuando la app solo se servía en la raíz. Un valor que empieza por `/` se
- * reinterpreta como relativo a la base; una URL absoluta (http…) se respeta tal cual.
+ * when the app was only served at the root. A value starting with `/` is
+ * interpreted relative to the base; an absolute URL (http…) is kept as-is.
  */
 export function assetFromEnv(value: string | undefined, fallback: string): string {
   if (!value) return asset(fallback)
